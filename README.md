@@ -1,6 +1,6 @@
-# 台北捷運即時地圖 | Taipei Metro Real-Time Map (Mini Metro Style)
+# 大台北捷運 & 機場捷運 即時動態地圖 | Greater Taipei & Taoyuan Airport MRT Live Map (Mini Metro Style)
 
-> 一個結合「真實地理地圖 (Leaflet.js + CartoDB)」與極簡「《Mini Metro》幾何美學」的台北捷運即時地圖單頁應用程式 (Single Page Application)。
+> 一個結合「真實地理地圖 (Leaflet.js + CartoDB)」與極簡「《Mini Metro》幾何美學」的大台北捷運與桃園機場捷運即時地圖單頁應用程式 (Single Page Application)。
 
 ![License](https://img.shields.io/badge/License-MIT-emerald.svg)
 ![Leaflet](https://img.shields.io/badge/Leaflet-v1.9.4-blue.svg)
@@ -10,95 +10,117 @@
 
 ## 📖 專案簡介 (Project Overview)
 
-本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，將台北捷運 (Taipei Metro TRTC) 各主線、支線與三鶯線，依據地理座標精確繪製於開源地圖上。車站則依據周邊地標特色，劃分為 **9 大 Mini Metro 幾何視覺圖形**，並搭配沿路線平滑行駛的動態膠囊列車，呈現極致流暢且現代化的捷運動態地圖。
+本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，將台北捷運 (Taipei Metro TRTC) 各主線、支線、三鶯線以及 **桃園機場捷運 (Taoyuan Airport MRT)**，依據地理座標精確繪製於開源地圖上。
 
-全專案整合於單一獨立 `index.html` 檔案中，無需任何 Node.js、npm 或打包工具，適合開箱即用與發布於 **GitHub Pages**。
+車站依據周邊地標特色劃分為 **9 大 Mini Metro 幾何視覺圖形**，並結合「**Zoom >= 14 車站名稱動態懸浮**」、「**瀏覽器 GPS 即時定位**」以及「**桃園機捷直達特快車 (流線尖頭 SVG 車廂)**」動態運轉。全程式碼採用命名清晰的模組化 JavaScript 架構 (`MapController`, `MrtDataService`, `AnimationEngine`, `UIController`) 撰寫。
+
+全專案整合於單一獨立 `index.html` 檔案中，適合開箱即用與發布於 **GitHub Pages**。
 
 ---
 
 ## ✨ 核心功能與亮點 (Key Features)
 
-### 1. 🌙 日間 / 夜間模式動態切換 (Day / Dark Mode)
-- **開源 CartoDB 底圖**：
+### 1. 🔤 站名縮放動態顯示 (Dynamic Station Name on Zoom)
+- **視覺簡潔化**：地圖預設縮小狀態下隱藏站名標籤，避免線條擁擠混亂。
+- **Zoom Level >= 14**：放大地圖至層級 14 以上時，自動在地圖上懸浮顯示中英文站名標籤，且樣式隨日夜模式動態轉化。
+- **Zoom Level < 14**：縮小層級時再度自動隱藏標籤。
+
+### 2. 📍 使用者 GPS 定位功能 (User Geolocation)
+- Header 控制列提供 **「定位我 / My Location」** 按鈕。
+- 結合 HTML5 Geolocation API 取得當前 GPS 座標，在地圖上標示**藍色脈衝定位點**與**精度範圍圓圈**。
+- 地圖中心會平滑飛往 (FlyTo) 定位點並設定適當縮放。
+
+### 3. 🚅 桃園機場捷運與直達特快車 (Taoyuan Airport MRT & Bullet Express)
+- **紫線 (A Line)**：收錄 A1 台北車站、A2 三重、A3 新北產業園區、A8 長庚醫院、A12 第一航廈、A13 第二航廈、A18 高鐵桃園站、A22 老街溪等車站。
+- **直達特快車與普通車雙軌運轉**：
+  - **普通車**：採用標準幾何膠囊列車圖示沿線行駛。
+  - **直達特快車**：採用特殊**流線型尖頭新幹線/高速列車頭 SVG 車廂**與「直達」標誌，顯眼易區分。
+
+### 4. 🌙 日間 / 夜間模式切換 (Day / Dark Mode)
+- 地圖底圖使用 CartoDB 開源底圖：
   - 日間模式：`CartoDB Positron`
   - 夜間模式：`CartoDB Dark Matter`
-- UI 介面（頂部導覽列、側邊欄、Modal 彈窗、車站 SVG 邊框）隨日夜模式動態轉化。
+- UI 面板、站名標籤與 SVG 圖形邊框動態隨主題響應。
 
-### 2. 📐 精緻 18px 車站幾何圖形 (Mini Metro Geometric Shapes)
-為避免地圖縮放時圖示過大遮蔽路線，車站圖形微調縮放至 **18x18px**（轉乘大站為 20x20px），依據車站周邊特色劃分：
-- **圓形 (Circle)**：住宅社區區（如：古亭、江子翠、景安）
-- **正方形 (Square)**：主要轉乘/鐵路大站（如：台北車站、板橋、南港）
-- **三角形 (Triangle)**：商圈/購物中心（如：西門、中山、忠孝復興）
-- **十字形 (Cross)**：醫院與醫療園區（如：台大醫院、石牌、亞東醫院）
-- **星形 (Star)**：景點/觀光區（如：淡水、動物園、台北101/世貿）
-- **五角形 (Pentagon)**：國際機場專用（松山機場）
-- **菱形 (Diamond)**：公園/綠地風景區（如：大安森林公園、象山、新店）
-- **橢圓形/體育館形 (Stadium)**：大學/文教區 (公館、輔大) 與體育館 (台北小巨蛋)
-- **倒鑽石形 (Inverted Diamond)**：金融/商業園區（如：南京復興、松江南京）
-
-### 3. 📖 獨立圖例說明 Modal (Shape Legend Modal)
-- 點擊 Header **「圖例說明 / Legend」** 按鈕彈出極致設計感的 Modal 視窗。
-- 完整列出 9 大形狀名稱、代表特色與實例站名。
-- 底部附帶設計靈感參考外連（包含 Dinosaur Polo Club《Mini Metro》官方網頁、Rail Island 參考網站與交通部 TDX 服務）。
-
-### 4. 🚊 膠囊列車動態模擬與互動 Popup
-- 採用 `requestAnimationFrame` 進行雙向高禎率座標內插平滑移動，並根據經緯度向量角自動旋轉行進車頭。
-- 點擊「車站」或「列車」可開啟側邊 Drawer 面板，即時查看預計到站時間、列車擁擠度等級 (1-4 級色塊) 與營運狀況。
-
-### 5. 🚏 主線完整性、支線與三鶯線「試營運」標誌
-- 包含文湖 (BR)、淡水信義 (R)、松山新店 (G)、中和新蘆 (O)、板南 (BL)、環狀 (Y) 與三鶯線 (LB)。
-- 三鶯線特別標註 **「試營運 (Trial Operation)」** 徽章。
-- 新北投支線 (R22A) 與小碧潭支線 (G03A) 採用半透明與虛線區隔。
+### 5. 📐 精緻 18px Mini Metro 車站幾何圖形
+- **圓形 (Circle)**：住宅區（古亭、江子翠、木柵）
+- **正方形 (Square)**：主要轉乘/鐵路大站（台北車站、板橋、南港）
+- **三角形 (Triangle)**：商圈/購物中心（西門、中山、忠孝復興、林口 Outlet）
+- **十字形 (Cross)**：醫院與醫療園區（台大醫院、石牌、長庚醫院 A8）
+- **星形 (Star)**：景點/觀光區（淡水、動物園、台北101/世貿）
+- **五角形 (Pentagon)**：國際機場專用（松山機場 BR12、機捷航廈 A12/A13）
+- **菱形 (Diamond)**：公園/綠地風景區（大安森林公園、象山、老街溪 A22）
+- **橢圓形/體育館形 (Stadium)**：大學文教區 (公館、輔大) 與體育園區 (小巨蛋、機捷體大 A7)
+- **倒鑽石形 (Inverted Diamond)**：金融/商業園區（南京復興、松江南京）
 
 ---
 
-## 🛠️ 使用之開源技術 (Tech Stack)
+## 🏗️ 模組化 JavaScript 架構 (Modular Code Structure)
 
-- **UI & Layout**: [Tailwind CSS CDN](https://tailwindcss.com/) + CSS Glassmorphism
-- **Web Map Engine**: [Leaflet.js 1.9.4](https://leafletjs.com/)
-- **Map Tiles**: [CartoDB Positron & Dark Matter Basemaps](https://carto.com/attributions)
-- **Typography**: Google Fonts ([Noto Sans TC](https://fonts.google.com/specimen/Noto+Sans+TC), [Oswald](https://fonts.google.com/specimen/Oswald), [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono))
+本專案採用結構化的 JavaScript 模組設計：
+- **`MapController`**：管理 Leaflet 地圖實例、CartoDB 底圖切換、Zoom 縮放監聽與 GPS 定位邏輯。
+- **`MrtDataService`**：大台北捷運與桃園機捷路線、車站座標與 9 大幾何圖形資料矩陣。
+- **`AnimationEngine`**：高禎率列車動畫循環、向量角度旋轉與直達車 (Bullet Express) SVG 渲染。
+- **`UIController`**：圖例 Modal 視窗、路線篩選選單、車站與列車資訊抽屜 Drawer 面板。
+- **`TDX_API_STUB`**：交通部 TDX 運輸資料流通服務 OAuth2 與即時位置 API 說明。
 
 ---
 
-## 🚀 本地執行方式 (Local Usage)
+## 🌿 Git Branching Workflow 開發流程指引
 
-### 方法 A：直接在瀏覽器雙擊開啟（最快速）
-1. 將本專案下載或 Clone 到本機。
-2. 雙擊開啟 `index.html`，即可在 Chrome / Safari / Edge / Firefox 瀏覽器中直接運行。
+在開發新功能時，建議遵循標準 Git 分支工作流 (Git Branching Workflow)：
 
-### 方法 B：啟動 Python HTTP 伺服器
 ```bash
-cd /path/to/metro
-python3 -m http.server 8000
+# 1. 確保位於 main 分支並同步最新程式碼
+git checkout main
+git pull origin main
+
+# 2. 建立並切換至新功能分支 (例如：feature/airport-mrt-express)
+git checkout -b feature/airport-mrt-express
+
+# 3. 進行程式碼修改與功能測試
+
+# 4. 檢視修改狀態並 Commit 變更
+git status
+git add .
+git commit -m "feat: add Taoyuan Airport MRT line, bullet express train & zoom labels"
+
+# 5. 上傳新功能分支至 GitHub 遠端
+git push -u origin feature/airport-mrt-express
+
+# 6. 測試確認無誤後，切換回 main 分支並安全合併 (Merge)
+git checkout main
+git merge --no-ff feature/airport-mrt-express -m "merge: feature/airport-mrt-express into main"
+
+# 7. 推送最新 main 分支至遠端
+git push origin main
+
+# 8. (選用) 刪除已合併的功能分支
+git branch -d feature/airport-mrt-express
+git push origin --delete feature/airport-mrt-express
 ```
-開啟瀏覽器前往 `http://localhost:8000` 即可預覽。
 
 ---
 
-## 🌐 GitHub Pages 靜態發布教學 (GitHub Pages Deployment)
+## 🚀 本地執行與 GitHub Pages 發布 (Run & Deploy)
 
-1. 將本專案推送到您的 GitHub 儲存庫 (Repository)：
+### 本地執行
+1. 雙擊開啟 `index.html`，即可在 Chrome / Safari / Edge 瀏覽器中直接運行。
+2. 或啟動 Python HTTP 伺服器：
    ```bash
-   git init
-   git add .
-   git commit -m "feat: initial commit of Taipei Metro Live Map"
-   git branch -M main
-   git remote add origin https://github.com/your-username/taipei-metro-live.git
-   git push -u origin main
+   python3 -m http.server 8000
    ```
-2. 進入 GitHub 儲存庫頁面 -> 點擊 **Settings**。
-3. 點選左側 **Pages** 選項。
-4. 在 **Build and deployment** 下方的 **Branch** 選擇 `main` 並儲存。
-5. 等待數秒後，即可獲得免費的線上展示網址（例如：`https://your-username.github.io/taipei-metro-live/`）！
+   瀏覽 `http://localhost:8000`
 
----
-
-## 🔌 交通部 TDX API 整合說明 (TDX API Integration Stub)
-
-如欲切換至真實交通部 TDX API 即時列車位置：
-1. 前往 [TDX 運輸資料流通服務](https://tdx.transportdata.tw/) 申請免費 Client ID 與 Client Secret。
-2. 程式碼末端 `TDX_API_STUB` 區塊中已預留 OAuth2 Token 與 `/v2/Rail/Metro/TrainLocation/TRTC` 介接說明。
+### GitHub Pages 免費靜態發布
+1. 推送至 GitHub：
+   ```bash
+   git add .
+   git commit -m "feat: release V3 Metro & Airport MRT Live Map"
+   git push origin main
+   ```
+2. 前往 Repository 頁面 -> **Settings** -> **Pages**。
+3. 在 **Branch** 選項中選擇 `main` 並按 **Save**。
 
 ---
 
