@@ -1,13 +1,13 @@
 /**
  * =========================================================================
  * js/map.js - Leaflet 地圖初始化、CARTO 底圖 (setUrl 即時無縫切換)、台北天文精確日出日落自動切換日夜模式
- * 拖曳左下角時間軸時，一到當日台北日出/日落時間點，地圖與 UI 即刻瞬間切換淺色/深色模式
+ * 拖曳左下角時間軸、輸入自訂時間或倍速播放時，一到台北日出/日落時間點無條件即刻切換淺色/深色模式
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
-    let themeMode = 'auto';    // 'auto' (日出日落自動感應) | 'light' (手動日間) | 'dark' (手動夜間)
+    let themeMode = 'auto';    // 'auto' | 'light' | 'dark'
     let tileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
@@ -79,9 +79,9 @@ const MapController = (function() {
         renderStations();
         bindMapEvents();
 
-        // 初始依據目前時間自動套用主題
+        // 初始依據當前時間無條件套用主題
         const initialDate = TimelineController ? TimelineController.getCurrentTimeDate() : new Date();
-        updateAutoTheme(initialDate, true);
+        updateAutoTheme(initialDate);
     }
 
     function renderPolylines() {
@@ -179,23 +179,11 @@ const MapController = (function() {
     }
 
     /**
-     * 右上角主題按鈕：三階循環切換【🌗 日夜自動感應 ➔ ☀️ 日間模式 ➔ 🌙 夜間模式】
+     * 右上角主題按鈕：切換深淺色模式
      */
     function toggleTheme() {
-        if (themeMode === 'auto') {
-            themeMode = 'light';
-            applyTheme('light');
-        } else if (themeMode === 'light') {
-            themeMode = 'dark';
-            applyTheme('dark');
-        } else {
-            themeMode = 'auto';
-            if (window.TimelineController) {
-                updateAutoTheme(TimelineController.getCurrentTimeDate(), true);
-            } else {
-                updateAutoTheme(new Date(), true);
-            }
-        }
+        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(nextTheme);
     }
 
     /**
@@ -216,20 +204,20 @@ const MapController = (function() {
         if (theme === 'light') {
             htmlEl.classList.remove('dark');
             htmlEl.classList.add('light');
-            if (themeIcon) themeIcon.innerText = themeMode === 'auto' ? '🌗' : '☀️';
-            if (themeText) themeText.innerText = themeMode === 'auto' ? '日間模式 (自動)' : '日間模式 (手動)';
+            if (themeIcon) themeIcon.innerText = '☀️';
+            if (themeText) themeText.innerText = '日間模式 (自動)';
         } else {
             htmlEl.classList.remove('light');
             htmlEl.classList.add('dark');
-            if (themeIcon) themeIcon.innerText = themeMode === 'auto' ? '🌗' : '🌙';
-            if (themeText) themeText.innerText = themeMode === 'auto' ? '夜間模式 (自動)' : '夜間模式 (手動)';
+            if (themeIcon) themeIcon.innerText = '🌙';
+            if (themeText) themeText.innerText = '夜間模式 (自動)';
         }
     }
 
     /**
-     * 依據時間軸虛擬時間與當天台北日出日落，即刻切換淺色 (Light) 或深色 (Dark) 地圖
+     * 無條件依據時間軸虛擬時間與台北日出日落，即刻瞬間切換淺色 (Light) 或深色 (Dark) 地圖
      */
-    function updateAutoTheme(dateObj, force = false) {
+    function updateAutoTheme(dateObj) {
         const d = dateObj || new Date();
         const sunInfo = getTaipeiSunriseSunset(d);
 
@@ -238,11 +226,9 @@ const MapController = (function() {
             sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
         }
 
-        if (!force && themeMode !== 'auto') return; // 若非強制且已手動鎖定則不自動變更
-
         const currentMinutes = d.getHours() * 60 + d.getMinutes();
 
-        // 精確判定當前時間是否介於日出與日落時間之間
+        // 精確判定當前時間是否介於日出與日落時間之間 (約 05:20 ~ 18:28)
         const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
         const targetTheme = isDaytime ? 'light' : 'dark';
 
@@ -252,10 +238,13 @@ const MapController = (function() {
     }
 
     function setThemeMode(mode) {
-        themeMode = mode; // 'auto' | 'light' | 'dark'
+        themeMode = mode;
         const badge = document.getElementById('themeModeBadge');
         if (badge) {
             badge.innerText = mode === 'auto' ? '日出日落自動感應' : (mode === 'light' ? '日間手動鎖定' : '夜間手動鎖定');
+        }
+        if (window.TimelineController) {
+            updateAutoTheme(TimelineController.getCurrentTimeDate());
         }
     }
 

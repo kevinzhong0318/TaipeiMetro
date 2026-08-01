@@ -136,7 +136,7 @@ const TimelineController = (function() {
 
         // 無條件直連呼叫地圖控制器的台北天文日出日落即刻感應切換
         if (window.MapController) {
-            window.MapController.updateAutoTheme(currentDate, true);
+            window.MapController.updateAutoTheme(currentDate);
         }
 
         // Nighttime sensing check for train operation (00:00 ~ 06:00 非營運時段)
