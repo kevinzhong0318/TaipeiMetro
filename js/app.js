@@ -46,7 +46,8 @@ const AnimationEngine = (function() {
             { line: "BR", speed: 0.0003, count: 3 },
             { line: "R",  speed: 0.00025, count: 4 },
             { line: "G",  speed: 0.00028, count: 3 },
-            { line: "O",  speed: 0.00026, count: 4 },
+            { line: "O",  speed: 0.00026, count: 3 },
+            { line: "O_Luzhou", speed: 0.00026, count: 2 },
             { line: "BL", speed: 0.00024, count: 4 },
             { line: "Y",  speed: 0.00032, count: 3 },
             { line: "LB", speed: 0.00035, count: 2 },
@@ -59,7 +60,7 @@ const AnimationEngine = (function() {
         trainConfigs.forEach(config => {
             const seq = MrtDataService.sequences[config.line];
             if (!seq) return;
-            const lineKey = config.line.startsWith("A") ? "A" : config.line;
+            const lineKey = config.line.startsWith("A") ? "A" : (config.line.startsWith("O") ? "O" : config.line);
             const lineInfo = MrtDataService.lines[config.line] || MrtDataService.lines[lineKey];
 
             for (let i = 0; i < config.count; i++) {

@@ -10,9 +10,9 @@
 
 ## 📖 專案簡介 (Project Overview)
 
-本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，並採用**高維度多檔案模組化架構 (Multi-file Architecture)** 拆分。將台北捷運 (Taipei Metro TRTC) 各主線、支線、**官方最新三鶯線 (San-Ying Line LB01~LB12)** 以及 **桃園機場捷運 (Taoyuan Airport MRT)** 精確繪製於開源地圖上。
+本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，並採用**高維度多檔案模組化架構 (Multi-file Architecture)** 拆分。將台北捷運 (Taipei Metro TRTC) 各主線、**中和新蘆線 (含迴龍線與蘆洲線分支 `O_Luzhou`)**、支線、**官方最新三鶯線 (San-Ying Line LB01~LB12)** 以及 **桃園機場捷運 (Taoyuan Airport MRT)** 精確繪製於開源地圖上。
 
-本系統具備「**機捷藍色直達特快車於 A13 機場第二航廈迴轉**」、「**最高 50 倍極速播放控制 (`1x`, `2x`, `5x`, `10x`, `25x`, `50x`)**」、「**日夜模式自動時間感應 vs 手動鎖定切換**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
+本系統具備「**修復橘線大橋頭至蘆洲支線 (`O_Luzhou`) 軌道線與列車運行**」、「**機捷藍色直達特快車於 A13 機場第二航廈迴轉**」、「**最高 50 倍極速播放控制 (`1x`, `2x`, `5x`, `10x`, `25x`, `50x`)**」、「**日夜模式自動時間感應 vs 手動鎖定切換**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
 
 ---
 
@@ -25,7 +25,7 @@ metro/
 ├── css/
 │   └── style.css         # 主題變數 (Light/Dark High-contrast)、Glassmorphism 面板與 Timeline 樣式
 ├── js/
-│   ├── config.js         # 路線、車站座標、機捷 A13 特快車迴轉、三鶯線 12 站、9 大幾何圖形 (MrtDataService)
+│   ├── config.js         # 路線數據（含橘線蘆洲支線 O_Luzhou）、車站座標、機捷 A13 迴轉、三鶯線 12 站 (MrtDataService)
 │   ├── map.js            # Leaflet 地圖初始化、CartoDB 日夜圖層 (Auto/Manual)、Zoom 14 站名與 GPS (MapController)
 │   ├── tdxApi.js         # TDX OAuth 2.0 認證與 API 即時資料處理 (TDXService)
 │   ├── routePlanner.js   # 站對站 BFS 搜尋、轉乘分析、高亮軌道線與平滑沿線移動導引動畫 (RoutePlanner)
@@ -36,24 +36,23 @@ metro/
 
 ---
 
-## ✨ 核心功能與亮點 (Key Features)
+## ✨ 核心功能與修復亮點 (Key Features & Fixes)
 
-### 1. ⚡ 機捷藍色直達特快車於 A13 第二航廈迴轉 (Express Train Turnaround at A13)
+### 1. 🍊 橘線大橋頭至蘆洲支線軌道與列車發車修復 (Orange Line Luzhou Branch Fix)
+- 補齊 `MrtDataService.lines.O_Luzhou` 定義，正確在地圖上繪製 `O12 大橋頭` ➔ `O50 三重國小` ➔ `O51 三和國中` ➔ `O52 徐匯中學` ➔ `O53 三民高中` ➔ `O54 蘆洲` 之橘色軌道線。
+- 發車引擎 `AnimationEngine` 納入蘆洲線營運列車，讓橘線雙分叉（迴龍與蘆洲）均有即時列車流暢行駛。
+
+### 2. ⚡ 機捷藍色直達特快車於 A13 第二航廈迴轉 (Express Train Turnaround at A13)
 - 藍色流線型特快車路線序列設定為 `A01 台北車站` ↔ `A13 機場第二航廈`。
-- 抵達 `A13 機場第二航廈` 完成單向服務後即原地迴轉折返往 `A01 台北車站` 方向，僅停靠大站（A1, A3, A8, A12, A13）。
 
-### 2. 🚀 時間倍率最高開放至 50 倍極速 (Up to 50x Speed Control)
-- 倍速控制器支援 **1x 正常**、**2x 快進**、**5x 高速**、**10x 極速**、**25x 超極速** 與 **50x 飛速**，方便觀看全天候列車營運與交會流向。
-
-### 3. 🌗 日夜模式「自動時間感應 vs 手動鎖定」選擇 (Auto vs Manual Theme)
-- **自動模式 (Auto Mode)**：系統依據時間自動切換（06:00~18:00 自動切換為 CartoDB Positron 淺色底圖，18:00~06:00 為 Dark Matter 深色底圖）。
-- **手動模式 (Manual Mode)**：使用者點擊日夜模式按鈕可自由手動強制鎖定日間淺色或夜間深色主題。
+### 3. 🚀 時間倍率最高開放至 50 倍極速 (Up to 50x Speed Control)
+- 倍速控制器支援 **1x**, **2x**, **5x**, **10x**, **25x**, **50x** 快速觀看全天候列車營運與交會流向。
 
 ---
 
 ## 🌿 Standard Git Branching Workflow 指引
 
-在開發新功能分支（例如 `feature/a13-express-50x-autotheme`）時，請遵循以下 Git 操作流程：
+在開發新功能分支（例如 `feature/fix-luzhou-branch`）時，請遵循以下 Git 操作流程：
 
 ```bash
 # 1. 切換至 main 分支並拉取最新遠端程式碼
@@ -61,26 +60,26 @@ git checkout main
 git pull origin main
 
 # 2. 建立並切換至新功能分支
-git checkout -b feature/a13-express-50x-autotheme
+git checkout -b feature/fix-luzhou-branch
 
 # 3. 進行程式碼開發與測試，確認無誤後 Commit
 git status
 git add .
-git commit -m "feat: A13 express train turnaround, 50x speed rate control & auto/manual day-night mode switch"
+git commit -m "fix: resolve Orange Line Luzhou branch (O12 to O54) polyline rendering & train spawning issue"
 
 # 4. 推送功能分支至 GitHub 遠端
-git push -u origin feature/a13-express-50x-autotheme
+git push -u origin feature/fix-luzhou-branch
 
 # 5. 切換回 main 分支並進行安全合併 (Merge)
 git checkout main
-git merge --no-ff feature/a13-express-50x-autotheme -m "merge: feature/a13-express-50x-autotheme into main"
+git merge --no-ff feature/fix-luzhou-branch -m "merge: feature/fix-luzhou-branch into main"
 
 # 6. 將最新 main 分支推送至 GitHub 遠端
 git push origin main
 
 # 7. (選用) 刪除已合併的分支
-git branch -d feature/a13-express-50x-autotheme
-git push origin --delete feature/a13-express-50x-autotheme
+git branch -d feature/fix-luzhou-branch
+git push origin --delete feature/fix-luzhou-branch
 ```
 
 ---
@@ -99,7 +98,7 @@ git push origin --delete feature/a13-express-50x-autotheme
 1. 推送至 GitHub：
    ```bash
    git add .
-   git commit -m "feat: release V11 A13 Express Turnaround, 50x Speed & Auto Theme SPA"
+   git commit -m "feat: release V12 Luzhou Branch Fix SPA"
    git push origin main
    ```
 2. 前往 Repository 頁面 -> **Settings** -> **Pages**。

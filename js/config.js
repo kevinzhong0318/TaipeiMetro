@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/config.js - 捷運與機捷路線車站數據服務 (MrtDataService)
- * 包含官方最新精確三鶯線 12 站 (LB01 頂埔 ➔ LB12 鶯桃福德)、機捷 A13 特快車迴轉、端點站與 9 大幾何圖形
+ * 包含中和新蘆線蘆洲支線 (O_Luzhou)、三鶯線 12 站、機捷 A13 特快車迴轉、端點站與 9 大幾何圖形
  * =========================================================================
  */
 const MrtDataService = (function() {
@@ -11,7 +11,8 @@ const MrtDataService = (function() {
         R22A: { name: "新北投支線", color: "#E3002C", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["北投", "新北投"] },
         G:    { name: "松山新店線", color: "#009065", weight: 6, termini: ["新店", "松山"] },
         G03A: { name: "小碧潭支線", color: "#009065", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["七張", "小碧潭"] },
-        O:    { name: "中和新蘆線", color: "#F8B61C", weight: 6, termini: ["南勢角", "迴龍 / 蘆洲"] },
+        O:    { name: "中和新蘆線 (迴龍線)", color: "#F8B61C", weight: 6, termini: ["南勢角", "迴龍"] },
+        O_Luzhou: { name: "中和新蘆線 (蘆洲線)", color: "#F8B61C", weight: 6, isBranch: true, termini: ["大橋頭", "蘆洲"] },
         BL:   { name: "板南線", color: "#0070BD", weight: 6, termini: ["頂埔", "南港展覽館"] },
         Y:    { name: "環狀線", color: "#FFD100", weight: 6, termini: ["大坪林", "新北產業園區"] },
         LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鶯桃福德"] },
@@ -121,7 +122,7 @@ const MrtDataService = (function() {
         "O09": { name: "行天宮", nameEn: "Xingtian Temple", lat: 25.0598, lng: 121.5333, shape: "star", lines: ["O"] },
         "O10": { name: "中山國小", nameEn: "Zhongshan Elem.", lat: 25.0628, lng: 121.5258, shape: "circle", lines: ["O"] },
         "O11": { name: "民權西路", nameEn: "Minquan W. Rd.", lat: 25.0630, lng: 121.5195, shape: "circle", lines: ["O", "R"] },
-        "O12": { name: "大橋頭", nameEn: "Daqiaotou", lat: 25.0631, lng: 121.5126, shape: "triangle", lines: ["O"] },
+        "O12": { name: "大橋頭", nameEn: "Daqiaotou", lat: 25.0631, lng: 121.5126, shape: "triangle", lines: ["O", "O_Luzhou"] },
         "O13": { name: "台北橋", nameEn: "Taipei Bridge", lat: 25.0632, lng: 121.4998, shape: "circle", lines: ["O"] },
         "O14": { name: "菜寮", nameEn: "Cailiao", lat: 25.0608, lng: 121.4920, shape: "circle", lines: ["O"] },
         "O15": { name: "三重", nameEn: "Sanchong", lat: 25.0556, lng: 121.4842, shape: "square", lines: ["O", "A"] },
@@ -131,11 +132,11 @@ const MrtDataService = (function() {
         "O19": { name: "輔大", nameEn: "Fu Jen Univ.", lat: 25.0333, lng: 121.4360, shape: "stadium", lines: ["O"] },
         "O20": { name: "丹鳳", nameEn: "Danfeng", lat: 25.0292, lng: 121.4237, shape: "circle", lines: ["O"] },
         "O21": { name: "迴龍", nameEn: "Huilong", lat: 25.0213, lng: 121.4116, shape: "square", lines: ["O"] },
-        "O50": { name: "三重國小", nameEn: "Sanchong Elem.", lat: 25.0700, lng: 121.4975, shape: "circle", lines: ["O"] },
-        "O51": { name: "三和國中", nameEn: "Sanhe Jr. High", lat: 25.0763, lng: 121.4886, shape: "stadium", lines: ["O"] },
-        "O52": { name: "徐匯中學", nameEn: "St. Ignatius High", lat: 25.0809, lng: 121.4800, shape: "stadium", lines: ["O"] },
-        "O53": { name: "三民高中", nameEn: "Sanmin High", lat: 25.0857, lng: 121.4735, shape: "stadium", lines: ["O"] },
-        "O54": { name: "蘆洲", nameEn: "Luzhou", lat: 25.0914, lng: 121.4645, shape: "square", lines: ["O"] },
+        "O50": { name: "三重國小", nameEn: "Sanchong Elem.", lat: 25.0700, lng: 121.4975, shape: "circle", lines: ["O_Luzhou"] },
+        "O51": { name: "三和國中", nameEn: "Sanhe Jr. High", lat: 25.0763, lng: 121.4886, shape: "stadium", lines: ["O_Luzhou"] },
+        "O52": { name: "徐匯中學", nameEn: "St. Ignatius High", lat: 25.0809, lng: 121.4800, shape: "stadium", lines: ["O_Luzhou"] },
+        "O53": { name: "三民高中", nameEn: "Sanmin High", lat: 25.0857, lng: 121.4735, shape: "stadium", lines: ["O_Luzhou"] },
+        "O54": { name: "蘆洲", nameEn: "Luzhou", lat: 25.0914, lng: 121.4645, shape: "square", lines: ["O_Luzhou"] },
 
         // BL 板南線
         "BL01": { name: "頂埔", nameEn: "Dingpu", lat: 24.9601, lng: 121.4205, shape: "square", lines: ["BL", "LB"] },
@@ -229,7 +230,7 @@ const MrtDataService = (function() {
         Y:  ["Y07","Y08","Y09","Y10","Y11","Y12","Y13","Y14","Y15","Y16","Y17","Y18","Y19","Y20"],
         LB: ["LB01","LB02","LB03","LB04","LB05","LB06","LB07","LB08","LB09","LB10","LB11","LB12"],
         A:  ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13","A14a","A15","A16","A17","A18","A19","A20","A21","A22"],
-        A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13"] // 特快車在 A13 機場第二航廈迴轉
+        A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13"]
     };
 
     const expressStops = ["A01", "A03", "A08", "A12", "A13"];
