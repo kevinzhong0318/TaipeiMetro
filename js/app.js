@@ -6,7 +6,7 @@
 
 /**
  * -------------------------------------------------------------------------
- * 1. AnimationEngine: 列車動畫循環、時間狀態自動同步與動態發車
+ * 1. AnimationEngine: 列車動畫循環、時間狀態自動同步與 06:00~24:00 營運發車
  * -------------------------------------------------------------------------
  */
 const AnimationEngine = (function() {
@@ -20,16 +20,17 @@ const AnimationEngine = (function() {
     function isNighttime() {
         const currentDate = TimelineController.getCurrentTimeDate();
         const hour = currentDate.getHours();
-        return hour >= 1 && hour < 6;
+        // 規範營運時間為 06:00 ~ 24:00 (非營運時間為 00:00 ~ 06:00)
+        return hour >= 0 && hour < 6;
     }
 
     function checkAndSyncNightState() {
         const night = isNighttime();
         if (night && trainObjects.length > 0) {
-            // 深夜收班：清空列車
+            // 深夜 00:00~06:00 收班：清空列車
             cleanup();
         } else if (!night && trainObjects.length === 0) {
-            // 營運時段：若無列車則即刻發車
+            // 06:00~24:00 營運時段：若無列車則即刻發車
             spawnTrains();
         }
     }
@@ -40,7 +41,7 @@ const AnimationEngine = (function() {
     }
 
     function spawnTrains() {
-        if (isNighttime()) return; // 夜間非營運時段不發車
+        if (isNighttime()) return; // 00:00 ~ 06:00 夜間非營運時段不發車
 
         const trainConfigs = [
             { line: "BR", speed: 0.0003, count: 3 },
@@ -257,7 +258,7 @@ const UIController = (function() {
                 btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
                 btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
                 const currentDate = TimelineController.getCurrentTimeDate();
-                MapController.updateAutoTheme(currentDate.getHours());
+                MapController.updateAutoTheme(currentDate);
             });
 
             btnManual.addEventListener('click', () => {
@@ -553,8 +554,8 @@ const UIController = (function() {
 
         const isNight = AnimationEngine.isNighttime();
         const opStatusTag = isNight 
-            ? `<span class="text-indigo-300 font-bold">🌙 目前為非營運時間 (末班車已收班)</span>`
-            : `<span class="text-emerald-400 font-bold">🟢 全線營運正常 · 班距 3-5 分鐘</span>`;
+            ? `<span class="text-indigo-300 font-bold">🌙 目前為非營運時間 (00:00~06:00 末班車已收班)</span>`
+            : `<span class="text-emerald-400 font-bold">🟢 全線營運正常 (06:00~24:00) · 班距 3-5 分鐘</span>`;
 
         document.getElementById('drawerBody').innerHTML = `
             <div class="flex items-center gap-2 mb-2">${lineChips} ${expressBadge}</div>

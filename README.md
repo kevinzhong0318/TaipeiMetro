@@ -12,7 +12,7 @@
 
 本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，並採用**高維度多檔案模組化架構 (Multi-file Architecture)** 拆分。將台北捷運 (Taipei Metro TRTC) 各主線、**中和新蘆線 (含迴龍線與蘆洲線分支 `O_Luzhou`)**、支線、**官方最新三鶯線 (San-Ying Line LB01~LB12)** 以及 **桃園機場捷運 (Taoyuan Airport MRT)** 精確繪製於開源地圖上。
 
-本系統具備「**修復橘線大橋頭至蘆洲支線 (`O_Luzhou`) 軌道線與列車運行**」、「**機捷藍色直達特快車於 A13 機場第二航廈迴轉**」、「**最高 50 倍極速播放控制 (`1x`, `2x`, `5x`, `10x`, `25x`, `50x`)**」、「**日夜模式自動時間感應 vs 手動鎖定切換**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
+本系統具備「**最高 500 倍超極速播放控制 (`1x`, `5x`, `10x`, `50x`, `100x`, `500x`)**」、「**模擬列車營運時間規範為 06:00 ~ 24:00**」、「**依台北天文座標精確動態計算當天日出日落時間切換主題**」、「**機捷藍色直達特快車於 A13 機場第二航廈迴轉**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
 
 ---
 
@@ -26,33 +26,34 @@ metro/
 │   └── style.css         # 主題變數 (Light/Dark High-contrast)、Glassmorphism 面板與 Timeline 樣式
 ├── js/
 │   ├── config.js         # 路線數據（含橘線蘆洲支線 O_Luzhou）、車站座標、機捷 A13 迴轉、三鶯線 12 站 (MrtDataService)
-│   ├── map.js            # Leaflet 地圖初始化、CartoDB 日夜圖層 (Auto/Manual)、Zoom 14 站名與 GPS (MapController)
+│   ├── map.js            # Leaflet 地圖、CartoDB 日夜圖層 (台北天文日出日落 Auto/Manual)、Zoom 14 站名與 GPS (MapController)
 │   ├── tdxApi.js         # TDX OAuth 2.0 認證與 API 即時資料處理 (TDXService)
 │   ├── routePlanner.js   # 站對站 BFS 搜尋、轉乘分析、高亮軌道線與平滑沿線移動導引動畫 (RoutePlanner)
-│   ├── timelineController.js # 時間線 Slider、自訂時間選擇器與 1x/2x/5x/10x/25x/50x 倍速控制器 (TimelineController)
-│   └── app.js            # 列車動畫倍速循環 (AnimationEngine) 與 cleanup() 重置 (UIController)
+│   ├── timelineController.js # 時間線 Slider、自訂時間選擇器與 1x/5x/10x/50x/100x/500x 倍速控制器 (TimelineController)
+│   └── app.js            # 列車動畫 06:00~24:00 發車循環 (AnimationEngine) 與 cleanup() 重置 (UIController)
 └── README.md             # 專案完整說明與 Git 工作流指引
 ```
 
 ---
 
-## ✨ 核心功能與修復亮點 (Key Features & Fixes)
+## ✨ 核心功能與亮點 (Key Features & Highlights)
 
-### 1. 🍊 橘線大橋頭至蘆洲支線軌道與列車發車修復 (Orange Line Luzhou Branch Fix)
-- 補齊 `MrtDataService.lines.O_Luzhou` 定義，正確在地圖上繪製 `O12 大橋頭` ➔ `O50 三重國小` ➔ `O51 三和國中` ➔ `O52 徐匯中學` ➔ `O53 三民高中` ➔ `O54 蘆洲` 之橘色軌道線。
-- 發車引擎 `AnimationEngine` 納入蘆洲線營運列車，讓橘線雙分叉（迴龍與蘆洲）均有即時列車流暢行駛。
+### 1. 🚀 最高 500 倍超極速播放控制 (Up to 500x Speed Control)
+- 倍速控制器支援 **1x 正常**、**5x 快進**、**10x 高速**、**50x 極速**、**100x 超極速** 與 **500x 飛速**，可在數秒內完美演算並演繹完一整天的捷運班次與路網流向。
 
-### 2. ⚡ 機捷藍色直達特快車於 A13 第二航廈迴轉 (Express Train Turnaround at A13)
-- 藍色流線型特快車路線序列設定為 `A01 台北車站` ↔ `A13 機場第二航廈`。
+### 2. 🚆 規範模擬列車營運時間為 06:00 ~ 24:00 (Operating Hours)
+- 營運時段：`06:00 ~ 24:00` 全線列車平滑行駛與倒數。
+- 非營運時段：`00:00 ~ 06:00` 標示 `🌙 目前為非營運時間 (00:00~06:00 末班車已收班)` 並清空列車。
 
-### 3. 🚀 時間倍率最高開放至 50 倍極速 (Up to 50x Speed Control)
-- 倍速控制器支援 **1x**, **2x**, **5x**, **10x**, **25x**, **50x** 快速觀看全天候列車營運與交會流向。
+### 3. 🌅 台北地理座標天文動態日出日落時間感知 (Astronomical Sunrise/Sunset Sensing)
+- 依據台北座標 (25.0463° N, 121.5175° E) 與一年中的日期（如夏季日出約 05:15/日落 18:45，冬季日出約 06:35/日落 17:15），精確計算當天日出與日落時間。
+- 自動模式下，虛擬時間介於當日日出與日落之間切換為 Positron 淺色底圖，日落至翌日日出切換為 Dark Matter 深色底圖。
 
 ---
 
 ## 🌿 Standard Git Branching Workflow 指引
 
-在開發新功能分支（例如 `feature/fix-luzhou-branch`）時，請遵循以下 Git 操作流程：
+在開發新功能分支（例如 `feature/500x-speed-taipei-sunrise-sensing`）時，請遵循以下 Git 操作流程：
 
 ```bash
 # 1. 切換至 main 分支並拉取最新遠端程式碼
@@ -60,26 +61,26 @@ git checkout main
 git pull origin main
 
 # 2. 建立並切換至新功能分支
-git checkout -b feature/fix-luzhou-branch
+git checkout -b feature/500x-speed-taipei-sunrise-sensing
 
 # 3. 進行程式碼開發與測試，確認無誤後 Commit
 git status
 git add .
-git commit -m "fix: resolve Orange Line Luzhou branch (O12 to O54) polyline rendering & train spawning issue"
+git commit -m "feat: 500x max speed rate, 06:00-24:00 operating hours & astronomical Taipei sunrise-sunset day-night switch"
 
 # 4. 推送功能分支至 GitHub 遠端
-git push -u origin feature/fix-luzhou-branch
+git push -u origin feature/500x-speed-taipei-sunrise-sensing
 
 # 5. 切換回 main 分支並進行安全合併 (Merge)
 git checkout main
-git merge --no-ff feature/fix-luzhou-branch -m "merge: feature/fix-luzhou-branch into main"
+git merge --no-ff feature/500x-speed-taipei-sunrise-sensing -m "merge: feature/500x-speed-taipei-sunrise-sensing into main"
 
 # 6. 將最新 main 分支推送至 GitHub 遠端
 git push origin main
 
 # 7. (選用) 刪除已合併的分支
-git branch -d feature/fix-luzhou-branch
-git push origin --delete feature/fix-luzhou-branch
+git branch -d feature/500x-speed-taipei-sunrise-sensing
+git push origin --delete feature/500x-speed-taipei-sunrise-sensing
 ```
 
 ---
@@ -98,7 +99,7 @@ git push origin --delete feature/fix-luzhou-branch
 1. 推送至 GitHub：
    ```bash
    git add .
-   git commit -m "feat: release V12 Luzhou Branch Fix SPA"
+   git commit -m "feat: release V13 500x Speed & Astronomical Sunrise-Sunset Theme SPA"
    git push origin main
    ```
 2. 前往 Repository 頁面 -> **Settings** -> **Pages**。

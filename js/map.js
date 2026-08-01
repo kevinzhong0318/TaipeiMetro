@@ -1,12 +1,12 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、底圖日夜切換 (Auto/Manual)、Zoom 站名顯示與 GPS 定位
+ * js/map.js - Leaflet 地圖初始化、台北天文精確日出日落日夜切換 (Auto/Manual)、Zoom 站名與 GPS 定位
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
-    let themeMode = 'auto';    // 'auto' (時間自動感知) | 'manual' (使用者手動強制)
+    let themeMode = 'auto';    // 'auto' (台北天文時間日出日落自動感知) | 'manual' (使用者手動強制)
     let tileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
@@ -23,6 +23,44 @@ const MapController = (function() {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }
     };
+
+    /**
+     * 根據台北地理座標 (25.0463° N, 121.5175° E) 與日期，精態計算當天日出與日落時間
+     */
+    function getTaipeiSunriseSunset(dateObj) {
+        const d = dateObj || new Date();
+        const start = new Date(d.getFullYear(), 0, 0);
+        const diff = d - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+
+        const lat = 25.0463;
+        const lng = 121.5175;
+        const rad = Math.PI / 180;
+
+        const dec = 23.45 * Math.sin(2 * Math.PI * (284 + dayOfYear) / 365) * rad;
+        const cosHa = -Math.tan(lat * rad) * Math.tan(dec);
+        const ha = Math.acos(Math.max(-1, Math.min(1, cosHa)));
+
+        const lngCorrection = (120 - lng) * 4 / 60; // 台北 UTC+8 赤經修正
+        const sunriseHour = 12 - (ha * 180 / Math.PI) / 15 + lngCorrection;
+        const sunsetHour = 12 + (ha * 180 / Math.PI) / 15 + lngCorrection;
+
+        const srMin = Math.round(sunriseHour * 60);
+        const ssMin = Math.round(sunsetHour * 60);
+
+        const srH = String(Math.floor(srMin / 60)).padStart(2, '0');
+        const srM = String(srMin % 60).padStart(2, '0');
+        const ssH = String(Math.floor(ssMin / 60)).padStart(2, '0');
+        const ssM = String(ssMin % 60).padStart(2, '0');
+
+        return {
+            sunriseMinutes: srMin,
+            sunsetMinutes: ssMin,
+            sunriseFormatted: `${srH}:${srM}`,
+            sunsetFormatted: `${ssH}:${ssM}`
+        };
+    }
 
     function init() {
         map = L.map('map', {
@@ -49,8 +87,8 @@ const MapController = (function() {
         const { lines, sequences, stations } = MrtDataService;
 
         Object.keys(sequences).forEach(seqKey => {
-            const lineKey = seqKey.startsWith("A") ? (seqKey === "A_Express" ? "A_Express" : "A") : seqKey;
-            const lineInfo = lines[lineKey] || lines[seqKey];
+            const lineKey = seqKey.startsWith("A") ? (seqKey === "A_Express" ? "A_Express" : "A") : (seqKey.startsWith("O") ? "O" : seqKey);
+            const lineInfo = lines[seqKey] || lines[lineKey];
             if (!lineInfo) return;
 
             const latLngs = sequences[seqKey].map(code => {
@@ -166,10 +204,21 @@ const MapController = (function() {
         }
     }
 
-    function updateAutoTheme(hour) {
+    function updateAutoTheme(dateObj) {
         if (themeMode !== 'auto') return; // 如果為手動鎖定，跳過自動感應
-        const isDaytime = hour >= 6 && hour < 18;
+        const d = dateObj || new Date();
+        const sunInfo = getTaipeiSunriseSunset(d);
+        const currentMinutes = d.getHours() * 60 + d.getMinutes();
+
+        // 依據台北當日實際日出與日落時間精確判定日夜主題
+        const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
         const targetTheme = isDaytime ? 'light' : 'dark';
+
+        const sunInfoEl = document.getElementById('taipeiSunInfoText');
+        if (sunInfoEl) {
+            sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
+        }
+
         if (targetTheme !== currentTheme) {
             applyTheme(targetTheme);
         }
@@ -179,7 +228,7 @@ const MapController = (function() {
         themeMode = mode; // 'auto' | 'manual'
         const badge = document.getElementById('themeModeBadge');
         if (badge) {
-            badge.innerText = mode === 'auto' ? '自動感應中' : '手動鎖定';
+            badge.innerText = mode === 'auto' ? '日出日落自動感應' : '手動鎖定';
         }
     }
 
@@ -248,6 +297,7 @@ const MapController = (function() {
         getPolylines: () => polylines,
         toggleTheme,
         updateAutoTheme,
+        getTaipeiSunriseSunset,
         setThemeMode,
         getThemeMode,
         locateUser,
