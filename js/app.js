@@ -6,7 +6,7 @@
 
 /**
  * -------------------------------------------------------------------------
- * 1. AnimationEngine: 列車動畫循環、夜間收班判定與平滑動態
+ * 1. AnimationEngine: 列車動畫循環、倍速計算與平滑動態
  * -------------------------------------------------------------------------
  */
 const AnimationEngine = (function() {
@@ -18,7 +18,8 @@ const AnimationEngine = (function() {
     Object.keys(MrtDataService.lines).forEach(k => lineVisibility[k] = true);
 
     function isNighttime() {
-        const hour = new Date().getHours();
+        const currentDate = TimelineController.getCurrentTimeDate();
+        const hour = currentDate.getHours();
         return hour >= 1 && hour < 6;
     }
 
@@ -63,7 +64,7 @@ const AnimationEngine = (function() {
                     segmentIndex: startSeg,
                     progress: initialProgress,
                     direction: direction,
-                    speed: config.speed + (Math.random() * 0.00008),
+                    baseSpeed: config.speed + (Math.random() * 0.00008),
                     isExpress: !!config.isExpress,
                     isDwelling: false,
                     dwellTimeRemaining: 0,
@@ -117,6 +118,8 @@ const AnimationEngine = (function() {
         const delta = Math.min(timestamp - lastTimestamp, 64);
         lastTimestamp = timestamp;
 
+        const speedMult = TimelineController.getSpeedMultiplier();
+
         if (!isNighttime()) {
             trainObjects.forEach(t => {
                 if (!lineVisibility[t.lineKey]) {
@@ -127,7 +130,7 @@ const AnimationEngine = (function() {
                 }
 
                 if (t.isDwelling) {
-                    t.dwellTimeRemaining -= delta;
+                    t.dwellTimeRemaining -= delta * speedMult;
                     if (t.dwellTimeRemaining <= 0) {
                         t.isDwelling = false;
                         t.dwellTimeRemaining = 0;
@@ -136,7 +139,7 @@ const AnimationEngine = (function() {
                     }
                 }
 
-                t.progress += t.speed * (delta / 16.6);
+                t.progress += t.baseSpeed * speedMult * (delta / 16.6);
 
                 if (t.progress >= 1.0) {
                     t.progress = 0;
@@ -194,9 +197,6 @@ const AnimationEngine = (function() {
         animFrameId = requestAnimationFrame(animate);
     }
 
-    /**
-     * 徹底清理動畫資源 (Robust cleanup function)
-     */
     function cleanup() {
         if (animFrameId) {
             cancelAnimationFrame(animFrameId);
@@ -269,28 +269,6 @@ const UIController = (function() {
         populateFilterPanel();
         populateLegendModal();
         initRoutePlannerForm();
-
-        setInterval(updateClockAndNightSensing, 1000);
-        updateClockAndNightSensing();
-    }
-
-    function updateClockAndNightSensing() {
-        const now = new Date();
-        document.getElementById('systemClock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
-        
-        const hour = now.getHours();
-        const isNight = hour >= 1 && hour < 6;
-        const badgeEl = document.getElementById('systemOpBadge');
-        const textEl = document.getElementById('systemOpText');
-
-        if (isNight) {
-            badgeEl.className = "text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 flex items-center gap-1 shrink-0";
-            textEl.innerText = "🌙 目前為非營運時間 (末班車已收班)";
-            document.getElementById('activeTrainCount').innerText = "0 (收班)";
-        } else {
-            badgeEl.className = "text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0";
-            textEl.innerText = "🟢 全線正常營運";
-        }
     }
 
     function selectStation(code) {
@@ -365,7 +343,6 @@ const UIController = (function() {
                 alert("已切換為模擬動態模式 (Mock Mode)，圖層與動畫已重整。");
             }
 
-            // Execute Full Clean Reset Mechanism
             MapController.purgeMapLayers();
             MapController.renderPolylines();
             MapController.renderStations();
@@ -621,6 +598,7 @@ const UIController = (function() {
 // Application Main Entry Point Initialization
 window.addEventListener('DOMContentLoaded', () => {
     MapController.init();
+    TimelineController.init();
     AnimationEngine.init();
     UIController.init();
 });

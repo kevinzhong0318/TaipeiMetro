@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/config.js - 捷運與機捷路線車站數據服務 (MrtDataService)
- * 包含正確三鶯線 (LB01-LB12)、桃園機捷、端點站名稱與 9 大幾何圖形
+ * 包含官方最新精確三鶯線 12 站 (LB01 頂埔 ➔ LB12 鶯桃福德)、機捷、端點站與 9 大幾何圖形
  * =========================================================================
  */
 const MrtDataService = (function() {
@@ -14,7 +14,7 @@ const MrtDataService = (function() {
         O:    { name: "中和新蘆線", color: "#F8B61C", weight: 6, termini: ["南勢角", "迴龍 / 蘆洲"] },
         BL:   { name: "板南線", color: "#0070BD", weight: 6, termini: ["頂埔", "南港展覽館"] },
         Y:    { name: "環狀線", color: "#FFD100", weight: 6, termini: ["大坪林", "新北產業園區"] },
-        LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鳳鳴"] },
+        LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鶯桃福德"] },
         A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6, termini: ["台北車站", "老街溪"] },
         A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true, termini: ["台北車站", "老街溪"] }
     };
@@ -178,19 +178,19 @@ const MrtDataService = (function() {
         "Y19": { name: "幸福", nameEn: "Xingfu", lat: 25.0456, lng: 121.4601, shape: "circle", lines: ["Y"] },
         "Y20": { name: "新北產業園區", nameEn: "New Taipei Ind. Park", lat: 25.0617, lng: 121.4597, shape: "square", lines: ["Y", "A"] },
 
-        // LB 三鶯線 (精確 12 站清單)
+        // LB 三鶯線 (官方最新精確 12 站名稱與順序)
         "LB01": { name: "頂埔", nameEn: "Dingpu", lat: 24.9601, lng: 121.4205, shape: "square", lines: ["LB", "BL"] },
         "LB02": { name: "媽祖田", nameEn: "Mazutian", lat: 24.9520, lng: 121.4080, shape: "circle", lines: ["LB"] },
-        "LB03": { name: "挖子", nameEn: "Wazi", lat: 24.9450, lng: 121.3980, shape: "circle", lines: ["LB"] },
+        "LB03": { name: "長壽山", nameEn: "Changshoushan", lat: 24.9450, lng: 121.3980, shape: "diamond", lines: ["LB"] },
         "LB04": { name: "橫溪", nameEn: "Hengxi", lat: 24.9390, lng: 121.3850, shape: "diamond", lines: ["LB"] },
-        "LB05": { name: "三峽", nameEn: "Sanxia", lat: 24.9350, lng: 121.3700, shape: "star", lines: ["LB"] },
-        "LB06": { name: "國家教育研究院", nameEn: "NAER", lat: 24.9380, lng: 121.3620, shape: "stadium", lines: ["LB"] },
-        "LB07": { name: "台北大學", nameEn: "NTPU", lat: 24.9430, lng: 121.3590, shape: "stadium", lines: ["LB"] },
+        "LB05": { name: "龍埔", nameEn: "Longpu", lat: 24.9360, lng: 121.3750, shape: "circle", lines: ["LB"] },
+        "LB06": { name: "三峽", nameEn: "Sanxia", lat: 24.9350, lng: 121.3660, shape: "star", lines: ["LB"] },
+        "LB07": { name: "臺北大學", nameEn: "NTPU", lat: 24.9430, lng: 121.3590, shape: "stadium", lines: ["LB"] },
         "LB08": { name: "鶯歌車站", nameEn: "Yingge Station", lat: 24.9530, lng: 121.3550, shape: "square", lines: ["LB"] },
         "LB09": { name: "陶瓷老街", nameEn: "Ceramics Old St.", lat: 24.9500, lng: 121.3470, shape: "star", lines: ["LB"] },
         "LB10": { name: "國華", nameEn: "Guohua", lat: 24.9560, lng: 121.3380, shape: "circle", lines: ["LB"] },
-        "LB11": { name: "鶯桃福德", nameEn: "Yingtao Fude", lat: 24.9670, lng: 121.3200, shape: "circle", lines: ["LB"] },
-        "LB12": { name: "鳳鳴", nameEn: "Fengming", lat: 24.9750, lng: 121.3100, shape: "square", lines: ["LB"] },
+        "LB11": { name: "永吉公園", nameEn: "Yongji Park", lat: 24.9670, lng: 121.3200, shape: "diamond", lines: ["LB"] },
+        "LB12": { name: "鶯桃福德", nameEn: "Yingtao Fude", lat: 24.9750, lng: 121.3100, shape: "circle", lines: ["LB"] },
 
         // A 桃園機場捷運 (Airport MRT)
         "A01": { name: "台北車站", nameEn: "Taipei Main Station", lat: 25.0478, lng: 121.5140, shape: "square", lines: ["A", "R", "BL"] },

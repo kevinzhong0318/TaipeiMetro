@@ -186,6 +186,11 @@ body {
     animation: dwell-pulse 0.8s infinite ease-in-out;
 }
 
+/* Timeline Control Range Slider */
+input[type=range] {
+    accent-color: #10b981;
+}
+
 /* GPS Location Marker animation */
 .user-gps-icon {
     background: transparent;

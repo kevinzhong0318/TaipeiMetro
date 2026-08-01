@@ -137,6 +137,36 @@
         </div>
     </header>
 
+    <!-- Bottom Timeline & Train Speed Controller Bar -->
+    <div id="timelineControlBar" class="fixed bottom-3 left-3 right-3 sm:left-6 sm:right-auto z-[1000] pointer-events-auto glass-panel rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row items-center gap-3 border border-gray-500/30 max-w-xl">
+        
+        <!-- Virtual Time Picker Input & Reset -->
+        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
+            <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-emerald-400">🕒 自訂時間:</span>
+                <input type="time" id="virtualTimeInput" value="08:00" class="bg-gray-900 border border-gray-700 text-xs font-mono px-2 py-1 rounded-lg text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            <button id="btnRealtimeReset" class="text-[11px] font-medium bg-gray-500/20 hover:bg-gray-500/30 px-2 py-1 rounded-lg text-gray-300 transition-all" title="重設為當前真實時間">同步即時</button>
+        </div>
+
+        <!-- Timeline Slider -->
+        <div class="flex-1 w-full flex items-center gap-2">
+            <span class="text-[10px] font-mono opacity-60">00:00</span>
+            <input type="range" id="timelineSlider" min="0" max="1439" value="480" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <span class="text-[10px] font-mono opacity-60">23:59</span>
+        </div>
+
+        <!-- Train Speed Multiplier Buttons (1x, 2x, 5x, 10x) -->
+        <div class="flex items-center gap-1 shrink-0">
+            <span class="text-[11px] font-bold opacity-75 mr-1">倍速:</span>
+            <button data-speed="1" class="speed-btn px-2 py-1 rounded-lg text-xs font-mono bg-emerald-500 text-white font-bold transition-all">1x</button>
+            <button data-speed="2" class="speed-btn px-2 py-1 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">2x</button>
+            <button data-speed="5" class="speed-btn px-2 py-1 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">5x</button>
+            <button data-speed="10" class="speed-btn px-2 py-1 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">10x</button>
+        </div>
+
+    </div>
+
     <!-- Route Planner Panel Dialog (Origin-Destination Route Finder) -->
     <div id="routePlannerModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
         <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
@@ -348,7 +378,7 @@
     </div>
 
     <!-- Bottom Station / Train Info Drawer -->
-    <div id="infoDrawer" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-[420px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
+    <div id="infoDrawer" class="fixed bottom-16 sm:bottom-16 left-3 right-3 sm:left-auto sm:right-4 sm:w-[420px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
         <div class="flex items-start justify-between">
             <div class="flex items-center gap-2.5">
                 <div id="drawerIcon" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"></div>
@@ -372,6 +402,7 @@
     <script src="js/map.js"></script>
     <script src="js/tdxApi.js"></script>
     <script src="js/routePlanner.js"></script>
+    <script src="js/timelineController.js"></script>
     <script src="js/app.js"></script>
 </body>
 
