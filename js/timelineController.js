@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/timelineController.js - 自訂時間選擇器與列車 1x/5x/10x/50x/100x/500x 倍速播放控制器
- * 調整時間軸一跨越日出/日落時間點，0 毫秒即刻動態切換淺色與深色地圖模式
+ * 調整時間軸一跨越日出/日落時間點，地圖與 UI 無條件即刻動態切換淺色與深色模式
  * =========================================================================
  */
 const TimelineController = (function() {
@@ -21,18 +21,20 @@ const TimelineController = (function() {
         const timeSlider = document.getElementById('timelineSlider');
         const speedButtons = document.querySelectorAll('.speed-btn');
 
+        const onTimeChange = (val) => {
+            if (val) {
+                const [h, m] = val.split(':').map(Number);
+                virtualMinuteOfDay = h * 60 + m;
+                isCustomMode = true;
+                if (timeSlider) timeSlider.value = virtualMinuteOfDay;
+                updateUI();
+                if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
+            }
+        };
+
         if (timeInput) {
-            timeInput.addEventListener('change', (e) => {
-                const val = e.target.value; // "HH:MM"
-                if (val) {
-                    const [h, m] = val.split(':').map(Number);
-                    virtualMinuteOfDay = h * 60 + m;
-                    isCustomMode = true;
-                    if (timeSlider) timeSlider.value = virtualMinuteOfDay;
-                    updateUI();
-                    if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
-                }
-            });
+            timeInput.addEventListener('change', (e) => onTimeChange(e.target.value));
+            timeInput.addEventListener('input', (e) => onTimeChange(e.target.value));
         }
 
         if (timeSlider) {
@@ -108,7 +110,7 @@ const TimelineController = (function() {
             lastTickTime = now;
 
             if (isCustomMode) {
-                // High-speed virtual minute increment (At 500x speed, 1 real sec = 500/60 = 8.33 virtual mins)
+                // High-speed virtual minute increment
                 virtualMinuteOfDay += (deltaMs / 1000) * (speedMultiplier / 60) * 1.5;
                 if (virtualMinuteOfDay >= 1440) virtualMinuteOfDay = 0;
 
@@ -122,7 +124,7 @@ const TimelineController = (function() {
                 }
             }
             updateUI();
-        }, 150); // 150ms 禎率即時比對與瞬間切換
+        }, 150);
     }
 
     function updateUI() {
@@ -132,7 +134,7 @@ const TimelineController = (function() {
             clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
         }
 
-        // 無條件直連呼叫地圖控制器的台北天文日出日落 0 毫秒極速感應切換
+        // 無條件直連呼叫地圖控制器的台北天文日出日落即刻感應切換
         if (window.MapController) {
             window.MapController.updateAutoTheme(currentDate, true);
         }

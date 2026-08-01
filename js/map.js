@@ -1,15 +1,14 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、雙圖層預載 (0ms極速瞬間切換)、台北天文精確日出日落自動切換日夜模式
- * 拖曳左下角時間軸時，一到當日台北日出/日落時間點 0 毫秒即刻瞬間切換淺色/深色模式
+ * js/map.js - Leaflet 地圖初始化、CARTO 底圖 (setUrl 即時無縫切換)、台北天文精確日出日落自動切換日夜模式
+ * 拖曳左下角時間軸時，一到當日台北日出/日落時間點，地圖與 UI 即刻瞬間切換淺色/深色模式
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
     let themeMode = 'auto';    // 'auto' (日出日落自動感應) | 'light' (手動日間) | 'dark' (手動夜間)
-    let darkTileLayer = null;
-    let lightTileLayer = null;
+    let tileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
     let polylines = {};
@@ -36,17 +35,15 @@ const MapController = (function() {
         const oneDay = 1000 * 60 * 60 * 24;
         const dayOfYear = Math.floor(diff / oneDay);
 
-        const lat = 25.0463;
-        const lng = 121.5175;
-        const rad = Math.PI / 180;
+        const decRad = 23.45 * Math.sin((360 / 365 * (dayOfYear - 81)) * (Math.PI / 180)) * (Math.PI / 180);
+        const latRad = 25.0463 * (Math.PI / 180);
 
-        const dec = 23.45 * Math.sin(2 * Math.PI * (284 + dayOfYear) / 365) * rad;
-        const cosHa = -Math.tan(lat * rad) * Math.tan(dec);
-        const ha = Math.acos(Math.max(-1, Math.min(1, cosHa)));
+        const cosHa = -Math.tan(latRad) * Math.tan(decRad);
+        const haDeg = Math.acos(Math.max(-1, Math.min(1, cosHa))) * (180 / Math.PI);
 
-        const lngCorrection = (120 - lng) * 4 / 60; // 台北 UTC+8 赤經修正
-        const sunriseHour = 12 - (ha * 180 / Math.PI) / 15 + lngCorrection;
-        const sunsetHour = 12 + (ha * 180 / Math.PI) / 15 + lngCorrection;
+        const solarNoonHour = 12 + (120 - 121.5175) * 4 / 60;
+        const sunriseHour = solarNoonHour - (haDeg / 15);
+        const sunsetHour = solarNoonHour + (haDeg / 15);
 
         const srMin = Math.round(sunriseHour * 60);
         const ssMin = Math.round(sunsetHour * 60);
@@ -75,16 +72,16 @@ const MapController = (function() {
         // Add Zoom Control to bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // 預先加載雙圖層（Dark Matter 與 Voyager），實現 0 毫秒極速瞬間無縫切換
-        darkTileLayer = L.tileLayer(tiles.dark.url, { attribution: tiles.dark.attribution, maxZoom: 19, opacity: 1 }).addTo(map);
-        lightTileLayer = L.tileLayer(tiles.light.url, { attribution: tiles.light.attribution, maxZoom: 19, opacity: 0 }).addTo(map);
+        // 加載單一標準 TileLayer
+        tileLayer = L.tileLayer(tiles.dark.url, { attribution: tiles.dark.attribution, maxZoom: 19 }).addTo(map);
 
         renderPolylines();
         renderStations();
         bindMapEvents();
 
-        // 初始自動感應主題
-        updateAutoTheme(new Date(), true);
+        // 初始依據目前時間自動套用主題
+        const initialDate = TimelineController ? TimelineController.getCurrentTimeDate() : new Date();
+        updateAutoTheme(initialDate, true);
     }
 
     function renderPolylines() {
@@ -202,19 +199,14 @@ const MapController = (function() {
     }
 
     /**
-     * 0 毫秒極速切換地圖與 UI 主題 (透明度無縫淡入淡出)
+     * 即刻無縫切換地圖底圖 (setUrl) 與 UI 主題
      */
     function applyTheme(theme) {
         currentTheme = theme;
 
-        if (darkTileLayer && lightTileLayer) {
-            if (theme === 'light') {
-                lightTileLayer.setOpacity(1);
-                darkTileLayer.setOpacity(0);
-            } else {
-                darkTileLayer.setOpacity(1);
-                lightTileLayer.setOpacity(0);
-            }
+        if (tileLayer) {
+            const tileConfig = tiles[theme] || tiles.dark;
+            tileLayer.setUrl(tileConfig.url);
         }
 
         const htmlEl = document.documentElement;
@@ -235,7 +227,7 @@ const MapController = (function() {
     }
 
     /**
-     * 依據時間軸虛擬時間與當天台北日出日落，0 毫秒即刻瞬間切換淺色 (Light) 或深色 (Dark) 地圖
+     * 依據時間軸虛擬時間與當天台北日出日落，即刻切換淺色 (Light) 或深色 (Dark) 地圖
      */
     function updateAutoTheme(dateObj, force = false) {
         const d = dateObj || new Date();
