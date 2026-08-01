@@ -241,10 +241,10 @@
     <!-- Header Navigation Bar -->
     <header class="fixed top-3 left-3 right-3 z-[1000] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pointer-events-none">
         
-        <!-- App Brand & Clock Status -->
-        <div class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto flex items-center justify-between gap-4 shadow-xl">
+        <!-- App Brand & Station Selection Dynamic Header Badge -->
+        <div id="headerBrandBadge" class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto flex items-center justify-between gap-4 shadow-xl transition-all duration-300">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-emerald-600 flex items-center justify-center shadow-md shrink-0">
+                <div id="brandIcon" class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-emerald-600 flex items-center justify-center shadow-md shrink-0 transition-colors duration-300">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2C7 2 4 3.5 4 8.5V16c0 1.5 1 2.5 2.5 2.5L5 20.5h14l-1.5-2c1.5 0 2.5-1 2.5-2.5V8.5C20 3.5 17 2 12 2z"/>
                         <circle cx="8" cy="14" r="1.5" fill="white"/>
@@ -254,9 +254,13 @@
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h1 class="font-display text-lg sm:text-xl font-bold tracking-wide leading-none">捷運 & 機捷 <span id="dataSourceBadge" class="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">模擬實時</span></h1>
+                        <h1 id="brandTitle" class="font-display text-base sm:text-lg font-bold tracking-wide leading-none transition-colors duration-300">大台北捷運 & 機場捷運</h1>
+                        <span id="dataSourceBadge" class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 flex items-center gap-1 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                            <span>🟡 模擬數據運行中</span>
+                        </span>
                     </div>
-                    <p class="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
+                    <p id="brandSubtitle" class="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-live"></span>
                         <span id="systemClock">00:00:00</span> · <span id="zoomIndicator">Zoom: 12.5</span>
                     </p>
@@ -322,7 +326,7 @@
                     </div>
                     <div>
                         <h2 class="text-base font-bold">資料源 & TDX API 串接設定</h2>
-                        <p class="text-xs text-gray-400">切換列車即時動態模擬或串接交通部 TDX API</p>
+                        <p class="text-xs text-gray-400">切換資料源將自動重整清空地圖與列車動畫</p>
                     </div>
                 </div>
                 <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center text-gray-400 hover:text-white transition-all">✕</button>
@@ -375,7 +379,7 @@
 
             <!-- Modal Footer Buttons -->
             <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-500/20">
-                <button id="btnSaveSettings" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg">儲存並應用設定</button>
+                <button id="btnSaveSettings" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg">儲存並重新加載 (Purge & Refresh)</button>
             </div>
 
         </div>
@@ -711,10 +715,9 @@
                 Y:  ["Y07","Y08","Y09","Y10","Y11","Y12","Y13","Y14","Y15","Y16","Y17","Y18","Y19","Y20"],
                 LB: ["LB01","LB02","LB03","LB04","LB05","LB06","LB07","LB08","LB09","LB10","LB11","LB12"],
                 A:  ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13","A14a","A15","A16","A17","A18","A19","A20","A21","A22"],
-                A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13","A14a","A15","A16","A17","A18","A19","A20","A21","A22"] // 沿全路線移動，但跳站停靠
+                A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13","A14a","A15","A16","A17","A18","A19","A20","A21","A22"]
             };
 
-            // 機捷直達特快車指定的「停靠大站」
             const expressStops = ["A01", "A03", "A08", "A12", "A13"];
 
             return { lines, shapes, stations, sequences, expressStops };
@@ -764,25 +767,12 @@
                 return false;
             }
 
-            async function fetchLiveTrainLocations() {
-                if (!accessToken) return null;
-                try {
-                    const res = await fetch('https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/TrainLocation/TRTC?$format=JSON', {
-                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    if (res.ok) return await res.json();
-                } catch (e) {
-                    console.error("TDX Live Location Fetch Error:", e);
-                }
-                return null;
-            }
-
-            return { getMode, setMode, getCredentials, saveCredentials, fetchAccessToken, fetchLiveTrainLocations };
+            return { getMode, setMode, getCredentials, saveCredentials, fetchAccessToken };
         })();
 
         /**
          * =========================================================================
-         * 3. MapController: Leaflet 地圖、底圖、Zoom 站名動態監聽與 GPS 定位管理
+         * 3. MapController: Leaflet 地圖、底圖、Zoom 站名動態監聽、GPS 與圖層重整 Purge
          * =========================================================================
          */
         const MapController = (function() {
@@ -848,6 +838,15 @@
                 updateTileLayer();
             }
 
+            function purgeMapLayers() {
+                Object.values(polylines).forEach(p => map.removeLayer(p));
+                Object.values(stationMarkers).forEach(m => map.removeLayer(m));
+                Object.values(stationLabelMarkers).forEach(l => map.removeLayer(l));
+                polylines = {};
+                stationMarkers = {};
+                stationLabelMarkers = {};
+            }
+
             function renderPolylines() {
                 const { lines, sequences, stations } = MrtDataService;
                 Object.entries(sequences).forEach(([seqKey, stationCodes]) => {
@@ -896,7 +895,7 @@
                     const icon = createStationSvgIcon(st.shape, isInterchange, st.lines);
                     
                     const marker = L.marker([st.lat, st.lng], { icon: icon, zIndexOffset: isInterchange ? 500 : 100 }).addTo(map);
-                    marker.on('click', () => UIController.showStationDrawer(code));
+                    marker.on('click', () => UIController.selectStation(code));
                     stationMarkers[code] = marker;
 
                     const labelIcon = L.divIcon({
@@ -959,22 +958,28 @@
             function getMap() { return map; }
             function getPolylines() { return polylines; }
 
-            return { init, toggleTheme, locateUser, resetView, getMap, getPolylines };
+            return { init, toggleTheme, locateUser, resetView, getMap, getPolylines, purgeMapLayers, renderPolylines, renderStations };
         })();
 
         /**
          * =========================================================================
-         * 4. AnimationEngine: 列車動畫循環、藍色直達車跳站與 3.5秒停靠載客邏輯
+         * 4. AnimationEngine: 列車動畫循環、直達車跳站、3.5s停靠與完全重載 (Purge)
          * =========================================================================
          */
         const AnimationEngine = (function() {
             let trainObjects = [];
             let lastTimestamp = 0;
             let lineVisibility = {};
+            let animFrameId = null;
 
             Object.keys(MrtDataService.lines).forEach(k => lineVisibility[k] = true);
 
             function init() {
+                spawnTrains();
+                animFrameId = requestAnimationFrame(animate);
+            }
+
+            function spawnTrains() {
                 const trainConfigs = [
                     { line: "BR", speed: 0.0003, count: 3 },
                     { line: "R",  speed: 0.00025, count: 4 },
@@ -984,7 +989,7 @@
                     { line: "Y",  speed: 0.00032, count: 3 },
                     { line: "LB", speed: 0.00035, count: 2 },
                     { line: "A",  speed: 0.00025, count: 3, isCommuter: true },
-                    { line: "A_Express", speed: 0.00042, count: 2, isExpress: true } // 藍色直達特快車
+                    { line: "A_Express", speed: 0.00042, count: 2, isExpress: true }
                 ];
 
                 let trainIdCounter = 101;
@@ -1011,7 +1016,6 @@
                             speed: config.speed + (Math.random() * 0.00008),
                             crowdedness: Math.floor(Math.random() * 4) + 1,
                             isExpress: !!config.isExpress,
-                            // Station Dwell State
                             isDwelling: false,
                             dwellTimeRemaining: 0,
                             currentStationCode: null,
@@ -1026,7 +1030,6 @@
                 });
 
                 document.getElementById('activeTrainCount').innerText = trainObjects.length;
-                requestAnimationFrame(animate);
             }
 
             function createTrainMarker(train, color) {
@@ -1035,7 +1038,6 @@
                 let anchor = [12, 6];
 
                 if (train.isExpress) {
-                    // Streamlined Bullet Train SVG for Blue Express (#0055AA)
                     size = [32, 13];
                     anchor = [16, 6.5];
                     html = `<div class="express-bullet-train" id="train-pill-${train.id}">
@@ -1049,7 +1051,6 @@
                         </div>
                     </div>`;
                 } else {
-                    // Standard Commuter Train Pill
                     html = `<div class="train-pill" style="background:${color};" id="train-pill-${train.id}">
                         <div class="train-light"></div>
                         <div class="train-arrow" style="transform: rotate(${train.direction < 0 ? '180deg' : '0deg'});"></div>
@@ -1075,14 +1076,13 @@
                         t.marker.setOpacity(1);
                     }
 
-                    // Handle Station Dwell Pause (3.5 seconds pause at stop stations)
                     if (t.isDwelling) {
                         t.dwellTimeRemaining -= delta;
                         if (t.dwellTimeRemaining <= 0) {
                             t.isDwelling = false;
                             t.dwellTimeRemaining = 0;
                         } else {
-                            return; // Pause position during station dwell
+                            return;
                         }
                     }
 
@@ -1100,19 +1100,15 @@
                             t.direction = 1;
                         }
 
-                        // Check Dwell Stopping Logic upon reaching a station
                         const arrivedStationCode = t.sequence[t.segmentIndex];
                         t.currentStationCode = arrivedStationCode;
 
                         if (t.isExpress) {
-                            // Express Train only stops at designated Express Stations!
                             if (MrtDataService.expressStops.includes(arrivedStationCode)) {
                                 t.isDwelling = true;
-                                t.dwellTimeRemaining = 3500; // 3.5 seconds dwell time
+                                t.dwellTimeRemaining = 3500;
                             }
-                            // Otherwise, non-express stations are skipped without dwelling!
                         } else {
-                            // Commuter Trains stop at every station for 3.5 seconds
                             t.isDwelling = true;
                             t.dwellTimeRemaining = 3500;
                         }
@@ -1144,17 +1140,26 @@
                     }
                 });
 
-                requestAnimationFrame(animate);
+                animFrameId = requestAnimationFrame(animate);
+            }
+
+            function restartEngine() {
+                if (animFrameId) cancelAnimationFrame(animFrameId);
+                trainObjects.forEach(t => MapController.getMap().removeLayer(t.marker));
+                trainObjects = [];
+                lastTimestamp = 0;
+                spawnTrains();
+                animFrameId = requestAnimationFrame(animate);
             }
 
             function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
 
-            return { init, setLineVisibility };
+            return { init, setLineVisibility, restartEngine };
         })();
 
         /**
          * =========================================================================
-         * 5. UIController: UI 面板、設定 Modal、圖例 Modal 與 Drawer 控制
+         * 5. UIController: 抬頭面板動態更新、UI 彈窗、設定 Modal 與 Purge Refresh 控制
          * =========================================================================
          */
         const UIController = (function() {
@@ -1189,13 +1194,28 @@
 
                 document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
 
-                // Settings Form logic
                 initSettingsForm();
-
                 populateFilterPanel();
                 populateLegendModal();
 
                 setInterval(updateClock, 1000);
+            }
+
+            function selectStation(code) {
+                const st = MrtDataService.stations[code];
+                if (!st) return;
+
+                const primaryLineKey = st.lines[0];
+                const lineInfo = MrtDataService.lines[primaryLineKey];
+
+                // Update Header Brand Badge
+                const brandIcon = document.getElementById('brandIcon');
+                brandIcon.style.background = lineInfo.color;
+
+                const titleEl = document.getElementById('brandTitle');
+                titleEl.innerHTML = `<span class="text-[11px] font-medium opacity-85 block text-gray-300">目前選擇車站</span>${lineInfo.name} - ${st.name} <span class="font-mono text-xs opacity-75">(${code})</span>`;
+
+                showStationDrawer(code);
             }
 
             function initSettingsForm() {
@@ -1233,22 +1253,32 @@
                     if (selectedMode === 'tdx') {
                         const statusEl = document.getElementById('tdxAuthStatus');
                         statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> 連線與驗證 Token 中...`;
+                        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> 🔴 連線驗證中`;
+                        badge.className = "text-xs font-normal text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20";
                         
                         const success = await TDXService.fetchAccessToken();
                         if (success) {
                             statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span class="text-emerald-400 font-bold">驗證成功！已取得 OAuth2 Access Token</span>`;
-                            badge.innerText = "TDX 實時 API";
-                            badge.className = "text-xs font-normal text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20";
-                            alert("成功連線至交通部 TDX API 平台！");
+                            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 🟢 TDX API 連線正常`;
+                            badge.className = "text-xs font-normal text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20";
+                            alert("成功連線至交通部 TDX API！圖層與動畫已重整加載。");
                         } else {
                             statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> <span class="text-rose-400 font-bold">認證失敗，請檢查 Client ID 與 Secret</span>`;
-                            alert("TDX API 認證失敗，請確認您的 Client ID 與 Client Secret 是否正確。");
+                            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 🔴 驗證失敗/降級模擬`;
+                            badge.className = "text-xs font-normal text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20";
+                            alert("TDX API 認證失敗，已切換回降級模擬狀態。");
                         }
                     } else {
-                        badge.innerText = "模擬實時";
-                        badge.className = "text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20";
-                        alert("已切換為模擬動態模式 (Mock Mode)。");
+                        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 🟡 模擬數據運行中`;
+                        badge.className = "text-xs font-normal text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20";
+                        alert("已切換為模擬動態模式 (Mock Mode)，圖層與動畫已重整。");
                     }
+
+                    // Automatic Purge & Refresh Execution
+                    MapController.purgeMapLayers();
+                    MapController.renderPolylines();
+                    MapController.renderStations();
+                    AnimationEngine.restartEngine();
 
                     closeSettingsModal();
                 });
@@ -1390,7 +1420,7 @@
             function closeDrawer() { document.getElementById('infoDrawer').classList.add('translate-y-96', 'opacity-0'); }
             function updateClock() { document.getElementById('systemClock').innerText = new Date().toLocaleTimeString('zh-TW', { hour12: false }); }
 
-            return { init, showStationDrawer, showTrainDrawer };
+            return { init, selectStation, showStationDrawer, showTrainDrawer };
         })();
 
         // Application Entry Point
