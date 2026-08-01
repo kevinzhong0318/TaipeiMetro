@@ -1,13 +1,12 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、CARTO 底圖 (setUrl 即時無縫切換)、台北天文精確日出日落自動切換日夜模式
- * 拖曳左下角時間軸、輸入自訂時間或倍速播放時，一到台北日出/日落時間點無條件即刻切換淺色/深色模式
+ * js/map.js - Leaflet 地圖初始化、CARTO 底圖 (日間 Voyager / 夜間 Dark Matter 切換)
+ * 已依需求完全取消日夜自動感應模式，提供純粹、直覺的 ☀️ 日間 / 🌙 夜間手動切換
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
-    let themeMode = 'auto';    // 'auto' | 'light' | 'dark'
     let tileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
@@ -25,42 +24,6 @@ const MapController = (function() {
         }
     };
 
-    /**
-     * 根據台北地理座標 (25.0463° N, 121.5175° E) 與日期，精確計算當天日出與日落時間
-     */
-    function getTaipeiSunriseSunset(dateObj) {
-        const d = dateObj || new Date();
-        const start = new Date(d.getFullYear(), 0, 0);
-        const diff = d - start;
-        const oneDay = 1000 * 60 * 60 * 24;
-        const dayOfYear = Math.floor(diff / oneDay);
-
-        const decRad = 23.45 * Math.sin((360 / 365 * (dayOfYear - 81)) * (Math.PI / 180)) * (Math.PI / 180);
-        const latRad = 25.0463 * (Math.PI / 180);
-
-        const cosHa = -Math.tan(latRad) * Math.tan(decRad);
-        const haDeg = Math.acos(Math.max(-1, Math.min(1, cosHa))) * (180 / Math.PI);
-
-        const solarNoonHour = 12 + (120 - 121.5175) * 4 / 60;
-        const sunriseHour = solarNoonHour - (haDeg / 15);
-        const sunsetHour = solarNoonHour + (haDeg / 15);
-
-        const srMin = Math.round(sunriseHour * 60);
-        const ssMin = Math.round(sunsetHour * 60);
-
-        const srH = String(Math.floor(srMin / 60)).padStart(2, '0');
-        const srM = String(srMin % 60).padStart(2, '0');
-        const ssH = String(Math.floor(ssMin / 60)).padStart(2, '0');
-        const ssM = String(ssMin % 60).padStart(2, '0');
-
-        return {
-            sunriseMinutes: srMin,
-            sunsetMinutes: ssMin,
-            sunriseFormatted: `${srH}:${srM}`,
-            sunsetFormatted: `${ssH}:${ssM}`
-        };
-    }
-
     function init() {
         map = L.map('map', {
             center: [25.0463, 121.5175], // 台北車站中心
@@ -72,16 +35,14 @@ const MapController = (function() {
         // Add Zoom Control to bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // 加載單一標準 TileLayer
+        // 加載標準 CARTO TileLayer
         tileLayer = L.tileLayer(tiles.dark.url, { attribution: tiles.dark.attribution, maxZoom: 19 }).addTo(map);
 
         renderPolylines();
         renderStations();
         bindMapEvents();
 
-        // 初始依據當前時間無條件套用主題
-        const initialDate = TimelineController ? TimelineController.getCurrentTimeDate() : new Date();
-        updateAutoTheme(initialDate);
+        applyTheme('dark');
     }
 
     function renderPolylines() {
@@ -179,7 +140,7 @@ const MapController = (function() {
     }
 
     /**
-     * 右上角主題按鈕：切換深淺色模式
+     * 右上角主題按鈕：雙向切換【☀️ 日間模式 ↔ 🌙 夜間模式】
      */
     function toggleTheme() {
         const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -187,7 +148,7 @@ const MapController = (function() {
     }
 
     /**
-     * 即刻無縫切換地圖底圖 (setUrl) 與 UI 主題
+     * 無縫切換地圖底圖 (setUrl) 與 UI 主題
      */
     function applyTheme(theme) {
         currentTheme = theme;
@@ -205,50 +166,14 @@ const MapController = (function() {
             htmlEl.classList.remove('dark');
             htmlEl.classList.add('light');
             if (themeIcon) themeIcon.innerText = '☀️';
-            if (themeText) themeText.innerText = '日間模式 (自動)';
+            if (themeText) themeText.innerText = '日間模式';
         } else {
             htmlEl.classList.remove('light');
             htmlEl.classList.add('dark');
             if (themeIcon) themeIcon.innerText = '🌙';
-            if (themeText) themeText.innerText = '夜間模式 (自動)';
+            if (themeText) themeText.innerText = '夜間模式';
         }
     }
-
-    /**
-     * 無條件依據時間軸虛擬時間與台北日出日落，即刻瞬間切換淺色 (Light) 或深色 (Dark) 地圖
-     */
-    function updateAutoTheme(dateObj) {
-        const d = dateObj || new Date();
-        const sunInfo = getTaipeiSunriseSunset(d);
-
-        const sunInfoEl = document.getElementById('taipeiSunInfoText');
-        if (sunInfoEl) {
-            sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
-        }
-
-        const currentMinutes = d.getHours() * 60 + d.getMinutes();
-
-        // 精確判定當前時間是否介於日出與日落時間之間 (約 05:20 ~ 18:28)
-        const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
-        const targetTheme = isDaytime ? 'light' : 'dark';
-
-        if (targetTheme !== currentTheme) {
-            applyTheme(targetTheme);
-        }
-    }
-
-    function setThemeMode(mode) {
-        themeMode = mode;
-        const badge = document.getElementById('themeModeBadge');
-        if (badge) {
-            badge.innerText = mode === 'auto' ? '日出日落自動感應' : (mode === 'light' ? '日間手動鎖定' : '夜間手動鎖定');
-        }
-        if (window.TimelineController) {
-            updateAutoTheme(TimelineController.getCurrentTimeDate());
-        }
-    }
-
-    function getThemeMode() { return themeMode; }
 
     function locateUser() {
         if (!navigator.geolocation) {
@@ -312,10 +237,7 @@ const MapController = (function() {
         getMap: () => map,
         getPolylines: () => polylines,
         toggleTheme,
-        updateAutoTheme,
-        getTaipeiSunriseSunset,
-        setThemeMode,
-        getThemeMode,
+        applyTheme,
         locateUser,
         resetView,
         renderPolylines,

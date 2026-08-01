@@ -6,7 +6,7 @@
 
 /**
  * -------------------------------------------------------------------------
- * 1. AnimationEngine: 列車動畫循環、時間狀態自動同步與 06:00~24:00 營運發車
+ * 1. AnimationEngine: 列車動畫循環與 06:00~24:00 營運發車
  * -------------------------------------------------------------------------
  */
 const AnimationEngine = (function() {
@@ -240,7 +240,7 @@ const AnimationEngine = (function() {
 
 /**
  * -------------------------------------------------------------------------
- * 2. UIController: 介面事件控制、動態端點班表、日夜 Auto/Manual 模式切換與 Reset 機制
+ * 2. UIController: 介面事件控制、動態端點班表與 Reset 機制
  * -------------------------------------------------------------------------
  */
 const UIController = (function() {
@@ -248,25 +248,6 @@ const UIController = (function() {
         document.getElementById('btnThemeToggle').addEventListener('click', MapController.toggleTheme);
         document.getElementById('btnLocationToggle').addEventListener('click', MapController.locateUser);
         document.getElementById('btnResetView').addEventListener('click', MapController.resetView);
-
-        const btnAuto = document.getElementById('btnSetThemeAuto');
-        const btnManual = document.getElementById('btnSetThemeManual');
-
-        if (btnAuto && btnManual) {
-            btnAuto.addEventListener('click', () => {
-                MapController.setThemeMode('auto');
-                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
-                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
-                const currentDate = TimelineController.getCurrentTimeDate();
-                MapController.updateAutoTheme(currentDate);
-            });
-
-            btnManual.addEventListener('click', () => {
-                MapController.setThemeMode('manual');
-                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
-                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
-            });
-        }
 
         // Filter Panel Toggle
         const btnFilter = document.getElementById('btnFilterToggle');
@@ -495,11 +476,7 @@ const UIController = (function() {
 
     function openLegendModal() { document.getElementById('legendModal').classList.remove('opacity-0', 'pointer-events-none'); }
     function closeLegendModal() { document.getElementById('legendModal').classList.add('opacity-0', 'pointer-events-none'); }
-    function openSettingsModal() { 
-        const date = TimelineController.getCurrentTimeDate();
-        MapController.updateAutoTheme(date);
-        document.getElementById('settingsModal').classList.remove('opacity-0', 'pointer-events-none'); 
-    }
+    function openSettingsModal() { document.getElementById('settingsModal').classList.remove('opacity-0', 'pointer-events-none'); }
     function closeSettingsModal() { document.getElementById('settingsModal').classList.add('opacity-0', 'pointer-events-none'); }
     function openRoutePlannerModal() { document.getElementById('routePlannerModal').classList.remove('opacity-0', 'pointer-events-none'); }
     function closeRoutePlannerModal() { document.getElementById('routePlannerModal').classList.add('opacity-0', 'pointer-events-none'); }

@@ -65,7 +65,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <h1 id="brandTitle" class="font-display text-base sm:text-lg font-bold tracking-wide leading-none transition-colors duration-300">大台北捷運 & 機場捷運</h1>
                         
-                        <!-- System Operation Status Indicator (Nighttime Sensing) -->
+                        <!-- System Operation Status Indicator -->
                         <span id="systemOpBadge" class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                             <span id="systemOpText">🟢 全線正常營運 (06:00~24:00)</span>
@@ -90,7 +90,7 @@
             </div>
         </div>
 
-        <!-- Right Side Controls: Route Planner, GPS Location, Settings Modal, Legend, Filter & Theme Toggle -->
+        <!-- Right Side Controls: Route Planner, GPS Location, Settings Modal, Legend, Filter & Direct Day/Night Toggle -->
         <div class="glass-panel rounded-2xl px-3 py-2 pointer-events-auto flex flex-wrap items-center gap-2 shadow-xl self-end sm:self-auto">
             
             <!-- Route Planner Button -->
@@ -106,7 +106,7 @@
             </button>
 
             <!-- TDX Real-time API Settings Button -->
-            <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源與台北日出日落設定">
+            <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源設定">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span>設定</span>
             </button>
@@ -128,10 +128,10 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             </button>
 
-            <!-- Day / Dark Mode Toggle Button -->
-            <button id="btnThemeToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all flex items-center gap-1.5">
+            <!-- Direct Day / Dark Mode Toggle Button (純手動切換) -->
+            <button id="btnThemeToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all flex items-center gap-1.5" title="切換日間 / 夜間地圖模式">
                 <span id="themeIcon">🌙</span>
-                <span id="themeText">夜間模式 (自動)</span>
+                <span id="themeText">夜間模式</span>
             </button>
 
         </div>
@@ -229,7 +229,7 @@
         </div>
     </div>
 
-    <!-- TDX Real-time API & Day/Night Mode Settings Modal Dialog -->
+    <!-- TDX Real-time API Settings Modal Dialog -->
     <div id="settingsModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
         <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
             
@@ -240,26 +240,11 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-bold">系統數據源 & 台北日出日落切換控制</h2>
-                        <p class="text-xs opacity-75">依據台北地理座標精確計算當天日出日落時間切換日夜模式</p>
+                        <h2 class="text-base font-bold">系統數據源設定 (Data Source Settings)</h2>
+                        <p class="text-xs opacity-75">切換模擬運行或串接交通部 TDX 平台 OAuth API</p>
                     </div>
                 </div>
                 <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
-            </div>
-
-            <!-- Day / Night Mode Auto vs Manual Selection -->
-            <div class="mb-5 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 space-y-2">
-                <div class="text-xs font-bold text-indigo-300 flex items-center justify-between">
-                    <span>🌗 日夜模式自動感應設定</span>
-                    <span id="themeModeBadge" class="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-400/40 text-indigo-300">日出日落自動感應</span>
-                </div>
-                <div id="taipeiSunInfoText" class="text-[11px] font-mono text-emerald-400 font-medium">
-                    🌅 今日日出 --:-- · 🌇 日落 --:--
-                </div>
-                <div class="flex items-center gap-3 pt-1">
-                    <button id="btnSetThemeAuto" class="flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all">自動模式 (精確天文日出日落)</button>
-                    <button id="btnSetThemeManual" class="flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">手動鎖定模式</button>
-                </div>
             </div>
 
             <!-- Radio Select Data Source Mode -->
