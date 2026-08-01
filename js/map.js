@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/map.js - Leaflet 地圖初始化、台北天文精確日出日落自動切換日夜模式 (Auto/Manual)、Zoom 14 站名與 GPS 定位
- * 拖曳左下角時間軸時會隨日出日落時間自動動態切換淺色與深色模式
+ * 拖曳左下角時間軸時會隨當日台北日出日落時間自動動態切換淺色與深色模式
  * =========================================================================
  */
 const MapController = (function() {
@@ -82,6 +82,9 @@ const MapController = (function() {
         renderPolylines();
         renderStations();
         bindMapEvents();
+
+        // 初始自動感應主題
+        updateAutoTheme(new Date());
     }
 
     function renderPolylines() {
@@ -186,7 +189,9 @@ const MapController = (function() {
 
     function applyTheme(theme) {
         currentTheme = theme;
-        tileLayer.setUrl(tiles[theme].url);
+        if (tileLayer && tiles[theme]) {
+            tileLayer.setUrl(tiles[theme].url);
+        }
 
         const htmlEl = document.documentElement;
         const themeIcon = document.getElementById('themeIcon');
@@ -209,19 +214,21 @@ const MapController = (function() {
      * 依據時間軸虛擬時間與當天台北日出日落，自動切換淺色 (Light) 或深色 (Dark) 地圖
      */
     function updateAutoTheme(dateObj) {
-        if (themeMode !== 'auto') return; // 若已手動點擊鎖定則不自動切換
         const d = dateObj || new Date();
         const sunInfo = getTaipeiSunriseSunset(d);
-        const currentMinutes = d.getHours() * 60 + d.getMinutes();
-
-        // 依據台北當日實際日出與日落時間精確判定日夜主題
-        const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
-        const targetTheme = isDaytime ? 'light' : 'dark';
 
         const sunInfoEl = document.getElementById('taipeiSunInfoText');
         if (sunInfoEl) {
             sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
         }
+
+        if (themeMode !== 'auto') return; // 若已手動點擊鎖定則不自動切換
+
+        const currentMinutes = d.getHours() * 60 + d.getMinutes();
+
+        // 依據台北當日實際日出與日落時間精確判定日夜主題
+        const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
+        const targetTheme = isDaytime ? 'light' : 'dark';
 
         if (targetTheme !== currentTheme) {
             applyTheme(targetTheme);

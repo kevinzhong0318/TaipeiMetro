@@ -249,6 +249,25 @@ const UIController = (function() {
         document.getElementById('btnLocationToggle').addEventListener('click', MapController.locateUser);
         document.getElementById('btnResetView').addEventListener('click', MapController.resetView);
 
+        const btnAuto = document.getElementById('btnSetThemeAuto');
+        const btnManual = document.getElementById('btnSetThemeManual');
+
+        if (btnAuto && btnManual) {
+            btnAuto.addEventListener('click', () => {
+                MapController.setThemeMode('auto');
+                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
+                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
+                const currentDate = TimelineController.getCurrentTimeDate();
+                MapController.updateAutoTheme(currentDate);
+            });
+
+            btnManual.addEventListener('click', () => {
+                MapController.setThemeMode('manual');
+                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
+                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
+            });
+        }
+
         // Filter Panel Toggle
         const btnFilter = document.getElementById('btnFilterToggle');
         const filterPanel = document.getElementById('filterPanel');
@@ -476,7 +495,11 @@ const UIController = (function() {
 
     function openLegendModal() { document.getElementById('legendModal').classList.remove('opacity-0', 'pointer-events-none'); }
     function closeLegendModal() { document.getElementById('legendModal').classList.add('opacity-0', 'pointer-events-none'); }
-    function openSettingsModal() { document.getElementById('settingsModal').classList.remove('opacity-0', 'pointer-events-none'); }
+    function openSettingsModal() { 
+        const date = TimelineController.getCurrentTimeDate();
+        MapController.updateAutoTheme(date);
+        document.getElementById('settingsModal').classList.remove('opacity-0', 'pointer-events-none'); 
+    }
     function closeSettingsModal() { document.getElementById('settingsModal').classList.add('opacity-0', 'pointer-events-none'); }
     function openRoutePlannerModal() { document.getElementById('routePlannerModal').classList.remove('opacity-0', 'pointer-events-none'); }
     function closeRoutePlannerModal() { document.getElementById('routePlannerModal').classList.add('opacity-0', 'pointer-events-none'); }
