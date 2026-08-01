@@ -1,191 +1,259 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、底圖日夜模式、Zoom >= 14 站名標籤與 GPS (MapController)
+ * js/map.js - Leaflet 地圖初始化、底圖日夜切換 (Auto/Manual)、Zoom 站名顯示與 GPS 定位
  * =========================================================================
  */
 const MapController = (function() {
-    const config = {
-        center: [25.0478, 121.5170],
-        zoom: 12.5,
-        minZoom: 10,
-        maxZoom: 18,
-        tiles: {
-            dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    let map = null;
+    let currentTheme = 'dark'; // 'dark' | 'light'
+    let themeMode = 'auto';    // 'auto' (時間自動感知) | 'manual' (使用者手動強制)
+    let tileLayer = null;
+    let stationMarkers = {};
+    let stationTextLabels = {};
+    let polylines = {};
+    let userLocationMarker = null;
+
+    const tiles = {
+        dark: {
+            url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        },
+        light: {
+            url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }
     };
 
-    let map;
-    let currentTileLayer;
-    let isDarkMode = true;
-    let polylines = {};
-    let stationMarkers = {};
-    let stationLabelMarkers = {};
-    let userLocationMarker = null;
-    let userAccuracyCircle = null;
-
     function init() {
         map = L.map('map', {
-            center: config.center,
-            zoom: config.zoom,
-            minZoom: config.minZoom,
-            maxZoom: config.maxZoom,
+            center: [25.0463, 121.5175], // 台北車站中心
+            zoom: 12.5,
             zoomControl: false,
             attributionControl: false
         });
 
+        // Add Zoom Control to bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        updateTileLayer();
+        tileLayer = L.tileLayer(tiles.dark.url, {
+            attribution: tiles.dark.attribution,
+            maxZoom: 19
+        }).addTo(map);
+
         renderPolylines();
         renderStations();
-
-        map.on('zoomend', handleZoomChange);
-        handleZoomChange();
-    }
-
-    function updateTileLayer() {
-        if (currentTileLayer) map.removeLayer(currentTileLayer);
-        const tileUrl = isDarkMode ? config.tiles.dark : config.tiles.light;
-        currentTileLayer = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
-    }
-
-    function toggleTheme() {
-        isDarkMode = !isDarkMode;
-        const htmlEl = document.documentElement;
-        document.getElementById('themeIcon').innerText = isDarkMode ? '🌙' : '☀️';
-        document.getElementById('themeText').innerText = isDarkMode ? '夜間模式' : '日間模式';
-
-        if (isDarkMode) {
-            htmlEl.classList.add('dark');
-            htmlEl.classList.remove('light');
-        } else {
-            htmlEl.classList.add('light');
-            htmlEl.classList.remove('dark');
-        }
-        updateTileLayer();
-    }
-
-    function purgeMapLayers() {
-        Object.values(polylines).forEach(p => map.removeLayer(p));
-        Object.values(stationMarkers).forEach(m => map.removeLayer(m));
-        Object.values(stationLabelMarkers).forEach(l => map.removeLayer(l));
-        polylines = {};
-        stationMarkers = {};
-        stationLabelMarkers = {};
-        if (window.RoutePlanner) RoutePlanner.clearHighlight();
+        bindMapEvents();
     }
 
     function renderPolylines() {
         const { lines, sequences, stations } = MrtDataService;
-        Object.entries(sequences).forEach(([seqKey, stationCodes]) => {
-            if (seqKey === "A_Express") return;
-            const lineKey = seqKey.startsWith("O") ? "O" : seqKey;
-            const lineConfig = lines[seqKey] || lines[lineKey];
-            const latLngs = stationCodes.map(code => [stations[code].lat, stations[code].lng]);
 
-            const options = {
-                color: lineConfig.color,
-                weight: lineConfig.weight,
-                opacity: lineConfig.isBranch ? 0.7 : 0.9,
+        Object.keys(sequences).forEach(seqKey => {
+            const lineKey = seqKey.startsWith("A") ? (seqKey === "A_Express" ? "A_Express" : "A") : seqKey;
+            const lineInfo = lines[lineKey] || lines[seqKey];
+            if (!lineInfo) return;
+
+            const latLngs = sequences[seqKey].map(code => {
+                const st = stations[code];
+                return [st.lat, st.lng];
+            });
+
+            const polylineOptions = {
+                color: lineInfo.color,
+                weight: lineInfo.weight,
+                opacity: 0.9,
                 lineCap: 'round',
                 lineJoin: 'round'
             };
-            if (lineConfig.dash) options.dashArray = lineConfig.dash;
 
-            polylines[seqKey] = L.polyline(latLngs, options).addTo(map);
+            if (lineInfo.dash) {
+                polylineOptions.dashArray = lineInfo.dash;
+            }
+
+            const poly = L.polyline(latLngs, polylineOptions).addTo(map);
+            polylines[seqKey] = poly;
         });
-    }
-
-    function createStationSvgIcon(shapeKey, isInterchange, transferLines) {
-        const shapeObj = MrtDataService.shapes[shapeKey] || MrtDataService.shapes.circle;
-        let transferDotsHtml = '';
-
-        if (isInterchange && transferLines.length > 1) {
-            const dots = transferLines.map(lineKey => {
-                const c = MrtDataService.lines[lineKey] ? MrtDataService.lines[lineKey].color : '#94a3b8';
-                return `<span class="w-1.5 h-1.5 rounded-full inline-block shadow-sm" style="background:${c}"></span>`;
-            }).join('');
-            transferDotsHtml = `<div class="absolute -bottom-1.5 flex items-center justify-center gap-0.5 px-0.5 py-0.2 rounded-full bg-slate-900/80 border border-slate-700/80">${dots}</div>`;
-        }
-
-        const svgContent = `<div class="station-node" style="width:18px; height:18px;">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">${shapeObj.svg}</svg>
-            ${transferDotsHtml}
-        </div>`;
-
-        return L.divIcon({ className: 'station-div-icon', html: svgContent, iconSize: [18, 18], iconAnchor: [9, 9] });
     }
 
     function renderStations() {
-        const { stations } = MrtDataService;
+        const { stations, shapes, lines } = MrtDataService;
+
         Object.entries(stations).forEach(([code, st]) => {
-            const isInterchange = st.lines.length > 1;
-            const icon = createStationSvgIcon(st.shape, isInterchange, st.lines);
-            
-            const marker = L.marker([st.lat, st.lng], { icon: icon, zIndexOffset: isInterchange ? 500 : 100 }).addTo(map);
-            marker.on('click', () => UIController.selectStation(code));
+            const primaryLineKey = st.lines[0];
+            const primaryLine = lines[primaryLineKey];
+            const shapeObj = shapes[st.shape] || shapes.circle;
+
+            // Scaled down SVG Marker (18x18px)
+            const iconHtml = `<div class="station-node" style="color:${primaryLine.color}" title="${st.name} (${code})">
+                <svg width="18" height="18" viewBox="0 0 18 18">${shapeObj.svg}</svg>
+            </div>`;
+
+            const stationIcon = L.divIcon({
+                className: 'station-div-icon',
+                html: iconHtml,
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+            });
+
+            const marker = L.marker([st.lat, st.lng], { icon: stationIcon, zIndexOffset: 900 }).addTo(map);
+            marker.on('click', () => {
+                UIController.selectStation(code);
+            });
+
             stationMarkers[code] = marker;
 
+            // Dynamic Station Text Label (Default Hidden, Visible Zoom >= 14)
+            const labelHtml = `<div class="station-text-label" id="label-${code}">${st.name}</div>`;
             const labelIcon = L.divIcon({
                 className: 'station-text-label-icon',
-                html: `<div class="station-text-label">${st.name} <span class="text-[9px] font-normal opacity-75">${code}</span></div>`,
-                iconSize: [120, 20],
-                iconAnchor: [60, 0]
+                html: labelHtml,
+                iconSize: [80, 20],
+                iconAnchor: [40, -4]
             });
-            stationLabelMarkers[code] = L.marker([st.lat, st.lng], { icon: labelIcon, zIndexOffset: 200 });
+
+            const labelMarker = L.marker([st.lat, st.lng], { icon: labelIcon, zIndexOffset: 500 });
+            stationTextLabels[code] = labelMarker;
+        });
+
+        checkZoomAndToggleLabels();
+    }
+
+    function bindMapEvents() {
+        map.on('zoomend', () => {
+            const zoom = map.getZoom();
+            document.getElementById('zoomIndicator').innerText = `Zoom: ${zoom.toFixed(1)}`;
+            checkZoomAndToggleLabels();
         });
     }
 
-    function handleZoomChange() {
-        const zoom = map.getZoom();
-        document.getElementById('zoomIndicator').innerText = `Zoom: ${zoom.toFixed(1)}`;
-        const showLabels = zoom >= 14;
+    function checkZoomAndToggleLabels() {
+        const currentZoom = map.getZoom();
+        const shouldShow = currentZoom >= 14;
 
-        Object.values(stationLabelMarkers).forEach(labelMarker => {
-            if (showLabels) labelMarker.addTo(map);
-            else map.removeLayer(labelMarker);
+        Object.values(stationTextLabels).forEach(labelMarker => {
+            if (shouldShow) {
+                if (!map.hasLayer(labelMarker)) labelMarker.addTo(map);
+            } else {
+                if (map.hasLayer(labelMarker)) map.removeLayer(labelMarker);
+            }
         });
     }
+
+    function toggleTheme() {
+        themeMode = 'manual'; // 手動點擊改為手動鎖定模式
+        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(nextTheme);
+    }
+
+    function applyTheme(theme) {
+        currentTheme = theme;
+        tileLayer.setUrl(tiles[theme].url);
+
+        const htmlEl = document.documentElement;
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+
+        if (theme === 'light') {
+            htmlEl.classList.remove('dark');
+            htmlEl.classList.add('light');
+            if (themeIcon) themeIcon.innerText = '☀️';
+            if (themeText) themeText.innerText = themeMode === 'auto' ? '日間模式 (自動)' : '日間模式 (手動)';
+        } else {
+            htmlEl.classList.remove('light');
+            htmlEl.classList.add('dark');
+            if (themeIcon) themeIcon.innerText = '🌙';
+            if (themeText) themeText.innerText = themeMode === 'auto' ? '夜間模式 (自動)' : '夜間模式 (手動)';
+        }
+    }
+
+    function updateAutoTheme(hour) {
+        if (themeMode !== 'auto') return; // 如果為手動鎖定，跳過自動感應
+        const isDaytime = hour >= 6 && hour < 18;
+        const targetTheme = isDaytime ? 'light' : 'dark';
+        if (targetTheme !== currentTheme) {
+            applyTheme(targetTheme);
+        }
+    }
+
+    function setThemeMode(mode) {
+        themeMode = mode; // 'auto' | 'manual'
+        const badge = document.getElementById('themeModeBadge');
+        if (badge) {
+            badge.innerText = mode === 'auto' ? '自動感應中' : '手動鎖定';
+        }
+    }
+
+    function getThemeMode() { return themeMode; }
 
     function locateUser() {
         if (!navigator.geolocation) {
-            alert("您的瀏覽器不支援 GPS 定位功能。");
+            alert('您的瀏覽器不支援 Geolocation GPS 定位功能。');
             return;
         }
-        navigator.geolocation.getCurrentPosition(pos => {
-            const { latitude, longitude, accuracy } = pos.coords;
-            if (userLocationMarker) map.removeLayer(userLocationMarker);
-            if (userAccuracyCircle) map.removeLayer(userAccuracyCircle);
 
-            userAccuracyCircle = L.circle([latitude, longitude], {
-                radius: accuracy,
-                color: '#3b82f6',
-                fillColor: '#3b82f6',
-                fillOpacity: 0.15,
-                weight: 1.5
-            }).addTo(map);
+        const btn = document.getElementById('btnLocationToggle');
+        btn.classList.add('animate-pulse');
 
-            const pulseIcon = L.divIcon({
-                className: 'user-gps-icon',
-                html: `<div class="relative flex items-center justify-center">
-                    <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white shadow-lg"></span>
-                </div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                btn.classList.remove('animate-pulse');
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
 
-            userLocationMarker = L.marker([latitude, longitude], { icon: pulseIcon, zIndexOffset: 1200 }).addTo(map);
-            map.flyTo([latitude, longitude], 15, { duration: 1.4 });
-        }, err => {
-            alert("無法取得您的 GPS 位置：" + err.message);
-        }, { enableHighAccuracy: true, timeout: 10000 });
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+
+                const userIcon = L.divIcon({
+                    className: 'user-gps-icon',
+                    html: `<div class="relative flex items-center justify-center">
+                        <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white shadow-lg"></span>
+                    </div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                userLocationMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                map.flyTo([lat, lng], 15, { duration: 1.5 });
+                userLocationMarker.bindPopup(`<b>📍 您當前的位置</b><br>GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`).openPopup();
+            },
+            (error) => {
+                btn.classList.remove('animate-pulse');
+                alert(`無法取得 GPS 位置：${error.message}`);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
     }
 
-    function resetView() { map.flyTo(config.center, config.zoom, { duration: 1.2 }); }
-    function getMap() { return map; }
-    function getPolylines() { return polylines; }
+    function resetView() {
+        map.flyTo([25.0463, 121.5175], 12.5, { duration: 1.2 });
+    }
 
-    return { init, toggleTheme, locateUser, resetView, getMap, getPolylines, purgeMapLayers, renderPolylines, renderStations };
+    function purgeMapLayers() {
+        Object.values(stationMarkers).forEach(m => map.removeLayer(m));
+        Object.values(stationTextLabels).forEach(m => map.removeLayer(m));
+        Object.values(polylines).forEach(p => map.removeLayer(p));
+        if (userLocationMarker) map.removeLayer(userLocationMarker);
+
+        stationMarkers = {};
+        stationTextLabels = {};
+        polylines = {};
+        userLocationMarker = null;
+    }
+
+    return {
+        init,
+        getMap: () => map,
+        getPolylines: () => polylines,
+        toggleTheme,
+        updateAutoTheme,
+        setThemeMode,
+        getThemeMode,
+        locateUser,
+        resetView,
+        renderPolylines,
+        renderStations,
+        purgeMapLayers
+    };
 })();

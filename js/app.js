@@ -238,7 +238,7 @@ const AnimationEngine = (function() {
 
 /**
  * -------------------------------------------------------------------------
- * 2. UIController: 介面事件控制、動態端點班表、模式切換 Reset 機制
+ * 2. UIController: 介面事件控制、動態端點班表、日夜 Auto/Manual 模式切換與 Reset 機制
  * -------------------------------------------------------------------------
  */
 const UIController = (function() {
@@ -246,6 +246,25 @@ const UIController = (function() {
         document.getElementById('btnThemeToggle').addEventListener('click', MapController.toggleTheme);
         document.getElementById('btnLocationToggle').addEventListener('click', MapController.locateUser);
         document.getElementById('btnResetView').addEventListener('click', MapController.resetView);
+
+        const btnAuto = document.getElementById('btnSetThemeAuto');
+        const btnManual = document.getElementById('btnSetThemeManual');
+
+        if (btnAuto && btnManual) {
+            btnAuto.addEventListener('click', () => {
+                MapController.setThemeMode('auto');
+                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
+                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
+                const currentDate = TimelineController.getCurrentTimeDate();
+                MapController.updateAutoTheme(currentDate.getHours());
+            });
+
+            btnManual.addEventListener('click', () => {
+                MapController.setThemeMode('manual');
+                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
+                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
+            });
+        }
 
         // Filter Panel Toggle
         const btnFilter = document.getElementById('btnFilterToggle');
@@ -579,7 +598,7 @@ const UIController = (function() {
 
         const typeTitle = train.isExpress ? "桃園機捷 藍色直達特快車" : "普通車";
         document.getElementById('drawerTitle').innerText = `列車 ${train.id} (${typeTitle})`;
-        document.getElementById('drawerSubtitle').innerText = `${lineInfo.name} · ${train.isExpress ? '極速 100 km/h (定點停靠)' : '每站皆停'}`;
+        document.getElementById('drawerSubtitle').innerText = `${lineInfo.name} · ${train.isExpress ? '極速 100 km/h (僅停 A1, A3, A8, A12, A13 於 A13 迴轉)' : '每站皆停'}`;
 
         const statusTag = train.isDwelling 
             ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40 dwell-badge">🟢 車站停靠載客中 (${(train.dwellTimeRemaining / 1000).toFixed(1)}s)</span>`
@@ -596,7 +615,7 @@ const UIController = (function() {
             <div class="space-y-1.5 opacity-90 mt-2">
                 <div>當前位置：<span class="font-bold">${MrtDataService.stations[currentCode].name} (${currentCode})</span></div>
                 <div>前進行向：<span class="font-bold">➔ ${MrtDataService.stations[nextCode].name} (${nextCode})</span></div>
-                <div>車廂類型：<span class="text-amber-400 font-bold">${train.isExpress ? '⚡ 藍色流線型直達車 (僅停 A1, A3, A8, A12, A13)' : '紫色普通車 (每站皆停)'}</span></div>
+                <div>車廂類型：<span class="text-amber-400 font-bold">${train.isExpress ? '⚡ 藍色流線型直達車 (A01 台北車站 ↔ A13 機場第二航廈迴轉)' : '紫色普通車 (每站皆停)'}</span></div>
             </div>
         `;
 

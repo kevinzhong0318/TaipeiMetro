@@ -1,11 +1,11 @@
 /**
  * =========================================================================
- * js/timelineController.js - 自訂時間選擇器與列車 1x/2x/5x/10x 倍速播放控制器
+ * js/timelineController.js - 自訂時間選擇器與列車 1x/2x/5x/10x/25x/50x 倍速播放控制器
  * =========================================================================
  */
 const TimelineController = (function() {
     let isCustomMode = false;       // 是否開啟自訂/虛擬時間模式
-    let speedMultiplier = 1;        // 預設 1x 速度 multiplier (1, 2, 5, 10)
+    let speedMultiplier = 1;        // 預設 1x 速度 multiplier (1, 2, 5, 10, 25, 50)
     let virtualMinuteOfDay = 480;   // 預設 08:00 AM (8 * 60 = 480 分鐘)
     let lastTickTime = Date.now();
     let tickIntervalId = null;
@@ -41,7 +41,6 @@ const TimelineController = (function() {
                 if (timeInput) {
                     const h = String(Math.floor(virtualMinuteOfDay / 60)).padStart(2, '0');
                     const m = String(virtualMinuteOfDay % 60).padStart(2, '0');
-                    inputTimeFormatted = `${h}:${m}`;
                     timeInput.value = `${h}:${m}`;
                 }
                 updateUI();
@@ -132,8 +131,14 @@ const TimelineController = (function() {
             clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
         }
 
-        // Nighttime sensing check
         const hour = currentDate.getHours();
+
+        // 呼叫地圖控制器的日夜模式自動感知（若是 Auto 模式，06:00~18:00 切換淺色底圖，其餘為深色）
+        if (window.MapController) {
+            window.MapController.updateAutoTheme(hour);
+        }
+
+        // Nighttime sensing check (01:00 ~ 06:00 非營運時段)
         const isNight = hour >= 1 && hour < 6;
         const badgeEl = document.getElementById('systemOpBadge');
         const textEl = document.getElementById('systemOpText');
