@@ -42,7 +42,7 @@
     <style>
         :root {
             --bg: #0b0f19;
-            --surface: rgba(17, 24, 39, 0.85);
+            --surface: rgba(17, 24, 39, 0.88);
             --border: rgba(255, 255, 255, 0.12);
             --text-main: #f3f4f6;
             --text-sub: #9ca3af;
@@ -50,18 +50,20 @@
             --st-stroke: #f8fafc;
             --popup-bg: #111827;
             --popup-text: #f9fafb;
+            --label-shadow: 0 0 4px #0b0f19, 0 0 8px #0b0f19;
         }
 
         html.light {
             --bg: #f8fafc;
-            --surface: rgba(255, 255, 255, 0.88);
-            --border: rgba(0, 0, 0, 0.12);
+            --surface: rgba(255, 255, 255, 0.94);
+            --border: rgba(15, 23, 42, 0.15);
             --text-main: #0f172a;
-            --text-sub: #475569;
+            --text-sub: #334155;
             --st-fill: #ffffff;
             --st-stroke: #0f172a;
             --popup-bg: #ffffff;
             --popup-text: #0f172a;
+            --label-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff, 0 0 12px #ffffff;
         }
 
         body {
@@ -88,7 +90,8 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            transition: background 0.3s ease, border 0.3s ease;
+            color: var(--text-main);
+            transition: background 0.3s ease, border 0.3s ease, color 0.3s ease;
         }
 
         /* Scaled Down Mini Metro Station Markers (18x18px) */
@@ -118,7 +121,7 @@
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
         }
 
-        /* Zoom >= 14 Dynamic Station Text Label Marker */
+        /* Zoom >= 14 Dynamic Station Text Label Marker with High-Contrast Light Mode Support */
         .station-text-label-icon {
             background: transparent;
             border: none;
@@ -126,14 +129,15 @@
 
         .station-text-label {
             font-family: 'Noto Sans TC', sans-serif;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 11px;
             color: var(--text-main);
-            text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg), 0 0 10px var(--bg);
+            text-shadow: var(--label-shadow);
             white-space: nowrap;
             pointer-events: none;
             user-select: none;
             transform: translateY(12px);
+            transition: color 0.3s ease, text-shadow 0.3s ease;
         }
 
         /* Mini Metro Pill Train Marker (Commuter) */
@@ -253,14 +257,22 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <h1 id="brandTitle" class="font-display text-base sm:text-lg font-bold tracking-wide leading-none transition-colors duration-300">大台北捷運 & 機場捷運</h1>
+                        
+                        <!-- System Operation Status Indicator -->
+                        <span id="systemOpBadge" class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span>🟢 全線正常營運</span>
+                        </span>
+
+                        <!-- API Connection Status Badge -->
                         <span id="dataSourceBadge" class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 flex items-center gap-1 shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                             <span>🟡 模擬數據運行中</span>
                         </span>
                     </div>
-                    <p id="brandSubtitle" class="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
+                    <p id="brandSubtitle" class="text-[11px] opacity-80 font-mono mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-live"></span>
                         <span id="systemClock">00:00:00</span> · <span id="zoomIndicator">Zoom: 12.5</span>
                     </p>
@@ -268,7 +280,7 @@
             </div>
 
             <!-- Mobile Quick Line Filter Badge Count -->
-            <div class="sm:hidden text-xs font-mono text-gray-400">
+            <div class="sm:hidden text-xs font-mono opacity-80">
                 <span id="activeTrainCount">0</span> 列車在線
             </div>
         </div>
@@ -326,7 +338,7 @@
                     </div>
                     <div>
                         <h2 class="text-base font-bold">資料源 & TDX API 串接設定</h2>
-                        <p class="text-xs text-gray-400">切換資料源將自動重整清空地圖與列車動畫</p>
+                        <p class="text-xs opacity-75">切換資料源將自動重整清空地圖與列車動畫</p>
                     </div>
                 </div>
                 <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center text-gray-400 hover:text-white transition-all">✕</button>
@@ -337,22 +349,22 @@
                 <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-500/10 border border-gray-500/20 cursor-pointer hover:bg-gray-500/15 transition-all">
                     <input type="radio" name="dataSourceMode" value="mock" id="modeMock" checked class="mt-1 text-purple-500 focus:ring-0">
                     <div>
-                        <div class="font-bold text-sm text-gray-200 flex items-center gap-2">
+                        <div class="font-bold text-sm flex items-center gap-2">
                             <span>模擬動態模式 (Mock Mode)</span>
                             <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/30">推薦演示</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-0.5">預設開啟，高禎率動畫沿軌道平滑行駛，支援直達車跳站與站點 3.5 秒停靠載客。</p>
+                        <p class="text-xs opacity-75 mt-0.5">預設開啟，高禎率動畫沿軌道平滑行駛，支援直達車跳站與站點 3.5 秒停靠載客。</p>
                     </div>
                 </label>
 
                 <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-500/10 border border-gray-500/20 cursor-pointer hover:bg-gray-500/15 transition-all">
                     <input type="radio" name="dataSourceMode" value="tdx" id="modeTdx" class="mt-1 text-purple-500 focus:ring-0">
                     <div>
-                        <div class="font-bold text-sm text-gray-200 flex items-center gap-2">
+                        <div class="font-bold text-sm flex items-center gap-2">
                             <span>真實 TDX API 數據模式 (TDX Real-time Mode)</span>
                             <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30">OAuth 2.0</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-0.5">輸入交通部 TDX 平台 Client ID & Secret，透過 OAuth2 即時輪詢 TRTC / TYMC API。</p>
+                        <p class="text-xs opacity-75 mt-0.5">輸入交通部 TDX 平台 Client ID & Secret，透過 OAuth2 即時輪詢 TRTC / TYMC API。</p>
                     </div>
                 </label>
             </div>
@@ -364,14 +376,14 @@
                     <a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" class="text-[11px] text-blue-400 hover:underline">免費申請 ID ➔</a>
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Client ID</label>
+                    <label class="block text-[11px] opacity-75 mb-1">Client ID</label>
                     <input type="text" id="tdxClientId" placeholder="例如：YourClientID-xxxx-xxxx" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-purple-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-[11px] text-gray-400 mb-1">Client Secret</label>
+                    <label class="block text-[11px] opacity-75 mb-1">Client Secret</label>
                     <input type="password" id="tdxClientSecret" placeholder="例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-purple-500 focus:outline-none">
                 </div>
-                <div id="tdxAuthStatus" class="text-[11px] font-mono text-gray-400 pt-1 flex items-center gap-1.5">
+                <div id="tdxAuthStatus" class="text-[11px] font-mono opacity-80 pt-1 flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-gray-500"></span>
                     <span>狀態：尚未驗證認證金鑰</span>
                 </div>
@@ -392,7 +404,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 捷運路線顯示控制
             </h2>
-            <button id="btnCloseFilter" class="text-gray-400 hover:text-white p-1">✕</button>
+            <button id="btnCloseFilter" class="opacity-75 hover:opacity-100 p-1">✕</button>
         </div>
         <div class="grid grid-cols-1 gap-2" id="lineFilterContainer">
             <!-- Programmatically populated -->
@@ -411,10 +423,10 @@
                     </div>
                     <div>
                         <h2 class="text-lg font-bold">Mini Metro 車站幾何圖形圖例說明</h2>
-                        <p class="text-xs text-gray-400">包含台北捷運與桃園機場捷運之車站幾何視覺標誌</p>
+                        <p class="text-xs opacity-75">包含台北捷運與桃園機場捷運之車站幾何視覺標誌</p>
                     </div>
                 </div>
-                <button id="btnCloseLegendModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center text-gray-400 hover:text-white transition-all">✕</button>
+                <button id="btnCloseLegendModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
             </div>
 
             <!-- Shape Grid List -->
@@ -436,7 +448,7 @@
                         <span>機捷藍色直達車 (Blue Express) & 3.5秒停靠機制</span>
                         <span class="text-[10px] bg-blue-500/20 border border-blue-400/40 px-1 py-0.2 rounded text-blue-300">藍色流線車頭</span>
                     </div>
-                    <p class="text-[11px] text-gray-300 leading-relaxed">
+                    <p class="text-[11px] opacity-90 leading-relaxed">
                         • <strong>跳站規則</strong>：藍色直達特快車僅停靠 A1台北車站、A3新北產業園區、A8長庚醫院、A12第一航廈、A13第二航廈。中途站不停靠高速通過。<br>
                         • <strong>3.5 秒停靠動畫</strong>：列車抵達需停靠的車站時，將會原地暫停 3.5 秒模擬乘客上下車。
                     </p>
@@ -444,8 +456,8 @@
             </div>
 
             <!-- Reference Links & Credits Footer -->
-            <div class="border-t border-gray-500/20 pt-4 text-xs text-gray-400 space-y-2">
-                <div class="font-bold text-gray-300 flex items-center gap-1.5">
+            <div class="border-t border-gray-500/20 pt-4 text-xs opacity-75 space-y-2">
+                <div class="font-bold flex items-center gap-1.5">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     設計靈感與參考來源：
                 </div>
@@ -465,18 +477,18 @@
     </div>
 
     <!-- Bottom Station / Train Info Drawer -->
-    <div id="infoDrawer" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
+    <div id="infoDrawer" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-[400px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
         <div class="flex items-start justify-between">
             <div class="flex items-center gap-2.5">
                 <div id="drawerIcon" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"></div>
                 <div>
                     <h3 id="drawerTitle" class="font-bold text-base leading-tight">車站名稱</h3>
-                    <p id="drawerSubtitle" class="text-xs text-gray-400 font-mono mt-0.5">資訊載入中...</p>
+                    <p id="drawerSubtitle" class="text-xs opacity-75 font-mono mt-0.5">資訊載入中...</p>
                 </div>
             </div>
-            <button id="btnCloseDrawer" class="text-gray-400 hover:text-white p-1">✕</button>
+            <button id="btnCloseDrawer" class="opacity-75 hover:opacity-100 p-1">✕</button>
         </div>
-        <div id="drawerBody" class="mt-3 text-xs space-y-2 border-t border-gray-500/20 pt-2.5">
+        <div id="drawerBody" class="mt-3 text-xs space-y-2.5 border-t border-gray-500/20 pt-2.5">
             <!-- Dynamic Content -->
         </div>
     </div>
@@ -487,7 +499,7 @@
     <script>
         /**
          * =========================================================================
-         * 1. MrtDataService: 捷運與機捷路線車站數據服務
+         * 1. MrtDataService: 捷運與機捷路線車站數據服務 (包含正確三鶯線 LB01-LB12)
          * =========================================================================
          */
         const MrtDataService = (function() {
@@ -500,9 +512,9 @@
                 O:    { name: "中和新蘆線", color: "#F8B61C", weight: 6 },
                 BL:   { name: "板南線", color: "#0070BD", weight: 6 },
                 Y:    { name: "環狀線", color: "#FFD100", weight: 6 },
-                LB:   { name: "三鶯線", color: "#76B7B2", weight: 5, isTrial: true },
-                A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6 }, // 紫色普通車
-                A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true } // 藍色直達車
+                LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true },
+                A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6 },
+                A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true }
             };
 
             const shapes = {
@@ -664,17 +676,17 @@
                 "Y19": { name: "幸福", nameEn: "Xingfu", lat: 25.0456, lng: 121.4601, shape: "circle", lines: ["Y"] },
                 "Y20": { name: "新北產業園區", nameEn: "New Taipei Ind. Park", lat: 25.0617, lng: 121.4597, shape: "square", lines: ["Y", "A"] },
 
-                // LB 三鶯線 (試營運)
+                // LB 三鶯線 (精確 12 站清單)
                 "LB01": { name: "頂埔", nameEn: "Dingpu", lat: 24.9601, lng: 121.4205, shape: "square", lines: ["LB", "BL"] },
                 "LB02": { name: "媽祖田", nameEn: "Mazutian", lat: 24.9520, lng: 121.4080, shape: "circle", lines: ["LB"] },
                 "LB03": { name: "挖子", nameEn: "Wazi", lat: 24.9450, lng: 121.3980, shape: "circle", lines: ["LB"] },
                 "LB04": { name: "橫溪", nameEn: "Hengxi", lat: 24.9390, lng: 121.3850, shape: "diamond", lines: ["LB"] },
                 "LB05": { name: "三峽", nameEn: "Sanxia", lat: 24.9350, lng: 121.3700, shape: "star", lines: ["LB"] },
                 "LB06": { name: "國家教育研究院", nameEn: "NAER", lat: 24.9380, lng: 121.3620, shape: "stadium", lines: ["LB"] },
-                "LB07": { name: "鶯歌", nameEn: "Yingge", lat: 24.9530, lng: 121.3550, shape: "square", lines: ["LB"] },
-                "LB08": { name: "陶瓷老街", nameEn: "Ceramics Old St.", lat: 24.9500, lng: 121.3470, shape: "star", lines: ["LB"] },
-                "LB09": { name: "國華", nameEn: "Guohua", lat: 24.9560, lng: 121.3380, shape: "circle", lines: ["LB"] },
-                "LB10": { name: "立體停車場", nameEn: "Multistory Carpark", lat: 24.9610, lng: 121.3300, shape: "circle", lines: ["LB"] },
+                "LB07": { name: "台北大學", nameEn: "NTPU", lat: 24.9430, lng: 121.3590, shape: "stadium", lines: ["LB"] },
+                "LB08": { name: "鶯歌車站", nameEn: "Yingge Station", lat: 24.9530, lng: 121.3550, shape: "square", lines: ["LB"] },
+                "LB09": { name: "陶瓷老街", nameEn: "Ceramics Old St.", lat: 24.9500, lng: 121.3470, shape: "star", lines: ["LB"] },
+                "LB10": { name: "國華", nameEn: "Guohua", lat: 24.9560, lng: 121.3380, shape: "circle", lines: ["LB"] },
                 "LB11": { name: "鶯桃福德", nameEn: "Yingtao Fude", lat: 24.9670, lng: 121.3200, shape: "circle", lines: ["LB"] },
                 "LB12": { name: "鳳鳴", nameEn: "Fengming", lat: 24.9750, lng: 121.3100, shape: "square", lines: ["LB"] },
 
@@ -1159,7 +1171,7 @@
 
         /**
          * =========================================================================
-         * 5. UIController: 抬頭面板動態更新、UI 彈窗、設定 Modal 與 Purge Refresh 控制
+         * 5. UIController: 抬頭面板動態更新、頭末班車時刻表、UI 彈窗與 Purge Refresh
          * =========================================================================
          */
         const UIController = (function() {
@@ -1213,7 +1225,7 @@
                 brandIcon.style.background = lineInfo.color;
 
                 const titleEl = document.getElementById('brandTitle');
-                titleEl.innerHTML = `<span class="text-[11px] font-medium opacity-85 block text-gray-300">目前選擇車站</span>${lineInfo.name} - ${st.name} <span class="font-mono text-xs opacity-75">(${code})</span>`;
+                titleEl.innerHTML = `<span class="text-[11px] font-medium opacity-85 block">目前選擇車站</span>${lineInfo.name} - ${st.name} <span class="font-mono text-xs opacity-75">(${code})</span>`;
 
                 showStationDrawer(code);
             }
@@ -1288,7 +1300,7 @@
                 const container = document.getElementById('lineFilterContainer');
                 container.innerHTML = Object.entries(MrtDataService.lines).map(([key, info]) => {
                     const trialTag = info.isTrial ? '<span class="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">試營運</span>' : '';
-                    const branchTag = info.isBranch ? '<span class="text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">支線</span>' : '';
+                    const branchTag = info.isBranch ? '<span class="text-[10px] bg-gray-500/20 opacity-75 border border-gray-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">支線</span>' : '';
                     const expressTag = info.isExpress ? '<span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">藍色直達</span>' : '';
 
                     return `<label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-500/10 hover:bg-gray-500/20 cursor-pointer text-xs transition-all">
@@ -1326,7 +1338,7 @@
                             <svg width="18" height="18" viewBox="0 0 18 18">${s.svg}</svg>
                         </div>
                         <div>
-                            <div class="font-bold text-sm text-gray-200">${s.label}</div>
+                            <div class="font-bold text-sm">${s.label}</div>
                             <div class="text-xs text-emerald-400 font-medium">${s.desc}</div>
                         </div>
                     </div>`;
@@ -1362,10 +1374,32 @@
 
                 document.getElementById('drawerBody').innerHTML = `
                     <div class="flex items-center gap-2 mb-2">${lineChips} ${expressBadge}</div>
-                    <div class="text-gray-300">地標類型：<span class="text-emerald-400 font-medium">${shapeObj.desc}</span></div>
-                    <div class="text-gray-300">營運狀態：<span class="text-emerald-400 font-bold">🟢 營運正常 · 班距 3-5 分鐘</span></div>
+                    <div class="opacity-90">地標類型：<span class="text-emerald-400 font-medium">${shapeObj.desc}</span></div>
+                    <div class="opacity-90">營運狀態：<span class="text-emerald-400 font-bold">🟢 全線營運正常 · 班距 3-5 分鐘</span></div>
+                    
+                    <!-- First & Last Train Schedule Card Section -->
+                    <div class="border-t border-gray-500/20 pt-2.5 mt-2">
+                        <div class="font-bold text-[11px] opacity-75 mb-1.5 flex items-center justify-between">
+                            <span>🕒 首末班車時刻表 (First & Last Train Schedule)</span>
+                            <span class="text-[10px] text-blue-400 font-mono">TDX / TRTC</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="bg-gray-500/10 border border-gray-500/15 p-2 rounded-xl">
+                                <div class="font-bold text-emerald-400 mb-0.5">往 端點站 方向</div>
+                                <div>頭班車：<span class="font-mono font-bold">06:00</span></div>
+                                <div>末班車：<span class="font-mono font-bold">24:00</span></div>
+                            </div>
+                            <div class="bg-gray-500/10 border border-gray-500/15 p-2 rounded-xl">
+                                <div class="font-bold text-blue-400 mb-0.5">往 起點站 方向</div>
+                                <div>頭班車：<span class="font-mono font-bold">06:00</span></div>
+                                <div>末班車：<span class="font-mono font-bold">00:15</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Real-time Arrival Countdown Section -->
                     <div class="border-t border-gray-500/20 pt-2">
-                        <div class="font-bold text-gray-400 text-[11px] mb-1.5">預計列車到站動態</div>
+                        <div class="font-bold text-[11px] opacity-75 mb-1.5">預計列車即時倒數 (Live Arrival)</div>
                         <div class="space-y-1.5">
                             <div class="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
                                 <span class="font-medium text-emerald-400">往 端點站 方向</span>
@@ -1403,13 +1437,13 @@
 
                 document.getElementById('drawerBody').innerHTML = `
                     <div class="flex items-center justify-between bg-gray-500/10 p-2.5 rounded-xl border border-gray-500/20">
-                        <span class="text-gray-300">運行狀態</span>
+                        <span class="opacity-90">運行狀態</span>
                         ${statusTag}
                     </div>
-                    <div class="space-y-1.5 text-gray-300 mt-2">
-                        <div>當前位置：<span class="text-white font-bold">${MrtDataService.stations[currentCode].name} (${currentCode})</span></div>
-                        <div>前進行向：<span class="text-white font-bold">➔ ${MrtDataService.stations[nextCode].name} (${nextCode})</span></div>
-                        <div>車廂類型：<span class="text-amber-300 font-bold">${train.isExpress ? '⚡ 藍色流線型直達車 (僅停 A1, A3, A8, A12, A13)' : '紫色普通車 (每站皆停)'}</span></div>
+                    <div class="space-y-1.5 opacity-90 mt-2">
+                        <div>當前位置：<span class="font-bold">${MrtDataService.stations[currentCode].name} (${currentCode})</span></div>
+                        <div>前進行向：<span class="font-bold">➔ ${MrtDataService.stations[nextCode].name} (${nextCode})</span></div>
+                        <div>車廂類型：<span class="text-amber-400 font-bold">${train.isExpress ? '⚡ 藍色流線型直達車 (僅停 A1, A3, A8, A12, A13)' : '紫色普通車 (每站皆停)'}</span></div>
                     </div>
                 `;
 
