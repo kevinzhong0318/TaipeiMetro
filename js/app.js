@@ -6,7 +6,7 @@
 
 /**
  * -------------------------------------------------------------------------
- * 1. AnimationEngine: 列車動畫循環、倍速計算與平滑動態
+ * 1. AnimationEngine: 列車動畫循環、時間狀態自動同步與動態發車
  * -------------------------------------------------------------------------
  */
 const AnimationEngine = (function() {
@@ -21,6 +21,17 @@ const AnimationEngine = (function() {
         const currentDate = TimelineController.getCurrentTimeDate();
         const hour = currentDate.getHours();
         return hour >= 1 && hour < 6;
+    }
+
+    function checkAndSyncNightState() {
+        const night = isNighttime();
+        if (night && trainObjects.length > 0) {
+            // 深夜收班：清空列車
+            cleanup();
+        } else if (!night && trainObjects.length === 0) {
+            // 營運時段：若無列車則即刻發車
+            spawnTrains();
+        }
     }
 
     function init() {
@@ -117,6 +128,9 @@ const AnimationEngine = (function() {
         if (!lastTimestamp) lastTimestamp = timestamp;
         const delta = Math.min(timestamp - lastTimestamp, 64);
         lastTimestamp = timestamp;
+
+        // 每禎自動檢查營運/深夜時段切換
+        checkAndSyncNightState();
 
         const speedMult = TimelineController.getSpeedMultiplier();
 
@@ -219,7 +233,7 @@ const AnimationEngine = (function() {
 
     function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
 
-    return { init, setLineVisibility, cleanup, restartEngine, isNighttime };
+    return { init, setLineVisibility, cleanup, restartEngine, isNighttime, checkAndSyncNightState };
 })();
 
 /**

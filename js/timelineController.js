@@ -29,6 +29,7 @@ const TimelineController = (function() {
                     isCustomMode = true;
                     if (timeSlider) timeSlider.value = virtualMinuteOfDay;
                     updateUI();
+                    if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
                 }
             });
         }
@@ -40,9 +41,11 @@ const TimelineController = (function() {
                 if (timeInput) {
                     const h = String(Math.floor(virtualMinuteOfDay / 60)).padStart(2, '0');
                     const m = String(virtualMinuteOfDay % 60).padStart(2, '0');
+                    inputTimeFormatted = `${h}:${m}`;
                     timeInput.value = `${h}:${m}`;
                 }
                 updateUI();
+                if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
             });
         }
 
@@ -66,6 +69,7 @@ const TimelineController = (function() {
                 isCustomMode = false;
                 setSpeed(1);
                 updateUI();
+                if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
             });
         }
     }
@@ -88,7 +92,7 @@ const TimelineController = (function() {
         } else {
             const d = new Date();
             const h = Math.floor(virtualMinuteOfDay / 60);
-            const m = virtualMinuteOfDay % 60;
+            const m = Math.floor(virtualMinuteOfDay % 60);
             d.setHours(h, m, 0, 0);
             return d;
         }
@@ -105,7 +109,6 @@ const TimelineController = (function() {
 
             if (isCustomMode) {
                 // If custom time mode and Nx speed, advance virtual minute
-                // 1 real second = (speedMultiplier * 0.05) virtual minute
                 virtualMinuteOfDay += (deltaMs / 1000) * speedMultiplier * 0.2;
                 if (virtualMinuteOfDay >= 1440) virtualMinuteOfDay = 0;
 
@@ -139,7 +142,8 @@ const TimelineController = (function() {
             if (isNight) {
                 badgeEl.className = "text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 flex items-center gap-1 shrink-0";
                 textEl.innerText = "🌙 目前為非營運時間 (末班車已收班)";
-                document.getElementById('activeTrainCount').innerText = "0 (收班)";
+                const countEl = document.getElementById('activeTrainCount');
+                if (countEl) countEl.innerText = "0 (收班)";
             } else {
                 badgeEl.className = "text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0";
                 textEl.innerText = `🟢 全線正常營運 (${speedMultiplier}x 倍速)`;
