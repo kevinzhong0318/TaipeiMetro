@@ -260,10 +260,10 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <h1 id="brandTitle" class="font-display text-base sm:text-lg font-bold tracking-wide leading-none transition-colors duration-300">大台北捷運 & 機場捷運</h1>
                         
-                        <!-- System Operation Status Indicator -->
+                        <!-- System Operation Status Indicator (Time-Perceived Nighttime Sensing) -->
                         <span id="systemOpBadge" class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                            <span>🟢 全線正常營運</span>
+                            <span id="systemOpText">🟢 全線正常營運</span>
                         </span>
 
                         <!-- API Connection Status Badge -->
@@ -285,9 +285,15 @@
             </div>
         </div>
 
-        <!-- Right Side Controls: GPS Location, Settings Modal, Legend, Filter & Theme Toggle -->
+        <!-- Right Side Controls: Route Planner, GPS Location, Settings Modal, Legend, Filter & Theme Toggle -->
         <div class="glass-panel rounded-2xl px-3 py-2 pointer-events-auto flex flex-wrap items-center gap-2 shadow-xl self-end sm:self-auto">
             
+            <!-- Route Planner Button -->
+            <button id="btnRoutePlannerToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all flex items-center gap-1.5" title="站對站路徑與轉乘規劃">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg>
+                <span>路徑規劃</span>
+            </button>
+
             <!-- User Location GPS Button -->
             <button id="btnLocationToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-all flex items-center gap-1.5" title="定位我當前的 GPS 位置">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
@@ -301,7 +307,7 @@
             </button>
 
             <!-- Shape Legend Button -->
-            <button id="btnLegendToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5">
+            <button id="btnLegendToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-500/10 hover:bg-gray-500/20 transition-all flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span>圖例</span>
             </button>
@@ -326,6 +332,66 @@
         </div>
     </header>
 
+    <!-- Route Planner Panel Dialog (Origin-Destination Route Finder) -->
+    <div id="routePlannerModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-gray-500/20 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold">捷運站對站路徑規劃 (Route Planner)</h2>
+                        <p class="text-xs opacity-75">計算最佳搭乘時間、乘車站數與高亮畫線</p>
+                    </div>
+                </div>
+                <button id="btnCloseRoutePlannerModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
+            </div>
+
+            <!-- Route Selection Form -->
+            <div class="space-y-3.5 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-400 mb-1">🟢 選擇起點車站 (Origin Station)</label>
+                    <select id="routeStartSelect" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-emerald-500 focus:outline-none">
+                        <!-- Programmatically populated -->
+                    </select>
+                </div>
+                <div class="flex items-center justify-center">
+                    <button id="btnSwapRouteStations" class="p-1.5 rounded-full bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 transition-all" title="對調起終點站">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"/></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-rose-400 mb-1">🔴 選擇終點車站 (Destination Station)</label>
+                    <select id="routeEndSelect" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-rose-500 focus:outline-none">
+                        <!-- Programmatically populated -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Route Search Result Card -->
+            <div id="routeResultCard" class="hidden bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 mb-4 space-y-2 text-xs">
+                <div class="font-bold text-emerald-300 text-sm flex items-center justify-between">
+                    <span>搭乘建議方案</span>
+                    <span id="routeEstTime" class="font-mono text-xs bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-400/40">預估約 -- 分鐘</span>
+                </div>
+                <div class="text-gray-300 space-y-1">
+                    <div>總乘車站數：<span id="routeStationCount" class="font-bold text-white">-- 站</span></div>
+                    <div>轉乘指引：<span id="routeTransfers" class="font-bold text-amber-300">直達無需轉乘</span></div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex items-center justify-between pt-3 border-t border-gray-500/20">
+                <button id="btnClearRouteHighlight" class="px-3 py-2 rounded-xl bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 text-xs font-medium transition-all hidden">清除路徑高亮</button>
+                <button id="btnExecuteRouteSearch" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg ml-auto">搜尋建議路線與高亮畫線</button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- TDX Real-time API Settings Modal Dialog -->
     <div id="settingsModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
         <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
@@ -341,7 +407,7 @@
                         <p class="text-xs opacity-75">切換資料源將自動重整清空地圖與列車動畫</p>
                     </div>
                 </div>
-                <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center text-gray-400 hover:text-white transition-all">✕</button>
+                <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
             </div>
 
             <!-- Radio Select Data Source Mode -->
@@ -477,7 +543,7 @@
     </div>
 
     <!-- Bottom Station / Train Info Drawer -->
-    <div id="infoDrawer" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-[400px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
+    <div id="infoDrawer" class="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:w-[420px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
         <div class="flex items-start justify-between">
             <div class="flex items-center gap-2.5">
                 <div id="drawerIcon" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"></div>
@@ -504,17 +570,17 @@
          */
         const MrtDataService = (function() {
             const lines = {
-                BR:   { name: "文湖線", color: "#C48C31", weight: 6 },
-                R:    { name: "淡水信義線", color: "#E3002C", weight: 6 },
-                R22A: { name: "新北投支線", color: "#E3002C", weight: 3.5, dash: "5, 5", isBranch: true },
-                G:    { name: "松山新店線", color: "#009065", weight: 6 },
-                G03A: { name: "小碧潭支線", color: "#009065", weight: 3.5, dash: "5, 5", isBranch: true },
-                O:    { name: "中和新蘆線", color: "#F8B61C", weight: 6 },
-                BL:   { name: "板南線", color: "#0070BD", weight: 6 },
-                Y:    { name: "環狀線", color: "#FFD100", weight: 6 },
-                LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true },
-                A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6 },
-                A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true }
+                BR:   { name: "文湖線", color: "#C48C31", weight: 6, termini: ["動物園", "南港展覽館"] },
+                R:    { name: "淡水信義線", color: "#E3002C", weight: 6, termini: ["象山", "淡水"] },
+                R22A: { name: "新北投支線", color: "#E3002C", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["北投", "新北投"] },
+                G:    { name: "松山新店線", color: "#009065", weight: 6, termini: ["新店", "松山"] },
+                G03A: { name: "小碧潭支線", color: "#009065", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["七張", "小碧潭"] },
+                O:    { name: "中和新蘆線", color: "#F8B61C", weight: 6, termini: ["南勢角", "迴龍 / 蘆洲"] },
+                BL:   { name: "板南線", color: "#0070BD", weight: 6, termini: ["頂埔", "南港展覽館"] },
+                Y:    { name: "環狀線", color: "#FFD100", weight: 6, termini: ["大坪林", "新北產業園區"] },
+                LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鳳鳴"] },
+                A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6, termini: ["台北車站", "老街溪"] },
+                A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true, termini: ["台北車站", "老街溪"] }
             };
 
             const shapes = {
@@ -737,13 +803,118 @@
 
         /**
          * =========================================================================
-         * 2. TDXService: 交通部 TDX API OAuth 2.0 與即時資料串接服務
+         * 2. RoutePlanner: 站對站路徑規劃與圖形搜尋演算法 (Graph BFS & Highlight)
+         * =========================================================================
+         */
+        const RoutePlanner = (function() {
+            let adjacencyGraph = {};
+            let routePolyline = null;
+
+            function buildGraph() {
+                adjacencyGraph = {};
+                const { sequences } = MrtDataService;
+
+                Object.values(sequences).forEach(seq => {
+                    for (let i = 0; i < seq.length - 1; i++) {
+                        const u = seq[i];
+                        const v = seq[i + 1];
+
+                        if (!adjacencyGraph[u]) adjacencyGraph[u] = new Set();
+                        if (!adjacencyGraph[v]) adjacencyGraph[v] = new Set();
+
+                        adjacencyGraph[u].add(v);
+                        adjacencyGraph[v].add(u);
+                    }
+                });
+            }
+
+            function findShortestPath(startCode, endCode) {
+                if (startCode === endCode) return { path: [startCode], transfers: [], stationCount: 0, estimatedMinutes: 0 };
+                if (!adjacencyGraph[startCode]) buildGraph();
+
+                const queue = [[startCode]];
+                const visited = new Set([startCode]);
+
+                while (queue.length > 0) {
+                    const path = queue.shift();
+                    const curr = path[path.length - 1];
+
+                    if (curr === endCode) {
+                        return analyzePathDetails(path);
+                    }
+
+                    const neighbors = adjacencyGraph[curr] || [];
+                    for (const n of neighbors) {
+                        if (!visited.has(n)) {
+                            visited.add(n);
+                            queue.push([...path, n]);
+                        }
+                    }
+                }
+                return null;
+            }
+
+            function analyzePathDetails(path) {
+                const { stations, lines } = MrtDataService;
+                let currentLine = null;
+                const transfers = [];
+
+                for (let i = 0; i < path.length - 1; i++) {
+                    const u = path[i];
+                    const v = path[i + 1];
+                    const commonLines = stations[u].lines.filter(l => stations[v].lines.includes(l));
+                    const segLine = commonLines[0] || stations[u].lines[0];
+
+                    if (currentLine && currentLine !== segLine) {
+                        transfers.push({ stationCode: u, stationName: stations[u].name, fromLine: currentLine, toLine: segLine });
+                    }
+                    currentLine = segLine;
+                }
+
+                const stationCount = path.length - 1;
+                const estimatedMinutes = Math.round(stationCount * 2.2 + transfers.length * 4);
+
+                return { path, transfers, stationCount, estimatedMinutes };
+            }
+
+            function drawRouteHighlight(pathCodes) {
+                clearHighlight();
+                const { stations } = MrtDataService;
+                const map = MapController.getMap();
+
+                const latLngs = pathCodes.map(code => [stations[code].lat, stations[code].lng]);
+
+                routePolyline = L.polyline(latLngs, {
+                    color: '#38bdf8',
+                    weight: 8,
+                    opacity: 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: 'pulse-live'
+                }).addTo(map);
+
+                map.fitBounds(routePolyline.getBounds(), { padding: [60, 60], maxZoom: 15 });
+            }
+
+            function clearHighlight() {
+                if (routePolyline) {
+                    MapController.getMap().removeLayer(routePolyline);
+                    routePolyline = null;
+                }
+            }
+
+            return { buildGraph, findShortestPath, drawRouteHighlight, clearHighlight };
+        })();
+
+        /**
+         * =========================================================================
+         * 3. TDXService: 交通部 TDX API OAuth 2.0 與即時資料串接服務
          * =========================================================================
          */
         const TDXService = (function() {
             let clientId = localStorage.getItem('tdx_client_id') || '';
             let clientSecret = localStorage.getItem('tdx_client_secret') || '';
-            let mode = localStorage.getItem('tdx_mode') || 'mock'; // 'mock' or 'tdx'
+            let mode = localStorage.getItem('tdx_mode') || 'mock';
             let accessToken = '';
 
             function getMode() { return mode; }
@@ -784,7 +955,7 @@
 
         /**
          * =========================================================================
-         * 3. MapController: Leaflet 地圖、底圖、Zoom 站名動態監聽、GPS 與圖層重整 Purge
+         * 4. MapController: Leaflet 地圖、底圖、Zoom 站名動態監聽、GPS 與圖層重整 Purge
          * =========================================================================
          */
         const MapController = (function() {
@@ -857,6 +1028,7 @@
                 polylines = {};
                 stationMarkers = {};
                 stationLabelMarkers = {};
+                RoutePlanner.clearHighlight();
             }
 
             function renderPolylines() {
@@ -975,7 +1147,7 @@
 
         /**
          * =========================================================================
-         * 4. AnimationEngine: 列車動畫循環、直達車跳站、3.5s停靠與完全重載 (Purge)
+         * 5. AnimationEngine: 列車動畫循環、時間感知夜間發車與 3.5s 停靠動畫
          * =========================================================================
          */
         const AnimationEngine = (function() {
@@ -986,12 +1158,19 @@
 
             Object.keys(MrtDataService.lines).forEach(k => lineVisibility[k] = true);
 
+            function isNighttime() {
+                const hour = new Date().getHours();
+                return hour >= 1 && hour < 6;
+            }
+
             function init() {
                 spawnTrains();
                 animFrameId = requestAnimationFrame(animate);
             }
 
             function spawnTrains() {
+                if (isNighttime()) return; // 夜間收班時間不上架列車動畫
+
                 const trainConfigs = [
                     { line: "BR", speed: 0.0003, count: 3 },
                     { line: "R",  speed: 0.00025, count: 4 },
@@ -1080,77 +1259,79 @@
                 const delta = Math.min(timestamp - lastTimestamp, 64);
                 lastTimestamp = timestamp;
 
-                trainObjects.forEach(t => {
-                    if (!lineVisibility[t.lineKey]) {
-                        t.marker.setOpacity(0);
-                        return;
-                    } else {
-                        t.marker.setOpacity(1);
-                    }
-
-                    if (t.isDwelling) {
-                        t.dwellTimeRemaining -= delta;
-                        if (t.dwellTimeRemaining <= 0) {
-                            t.isDwelling = false;
-                            t.dwellTimeRemaining = 0;
-                        } else {
+                if (!isNighttime()) {
+                    trainObjects.forEach(t => {
+                        if (!lineVisibility[t.lineKey]) {
+                            t.marker.setOpacity(0);
                             return;
-                        }
-                    }
-
-                    t.progress += t.speed * (delta / 16.6);
-
-                    if (t.progress >= 1.0) {
-                        t.progress = 0;
-                        t.segmentIndex += t.direction;
-
-                        if (t.segmentIndex >= t.sequence.length - 1) {
-                            t.segmentIndex = t.sequence.length - 2;
-                            t.direction = -1;
-                        } else if (t.segmentIndex < 0) {
-                            t.segmentIndex = 0;
-                            t.direction = 1;
+                        } else {
+                            t.marker.setOpacity(1);
                         }
 
-                        const arrivedStationCode = t.sequence[t.segmentIndex];
-                        t.currentStationCode = arrivedStationCode;
+                        if (t.isDwelling) {
+                            t.dwellTimeRemaining -= delta;
+                            if (t.dwellTimeRemaining <= 0) {
+                                t.isDwelling = false;
+                                t.dwellTimeRemaining = 0;
+                            } else {
+                                return;
+                            }
+                        }
 
-                        if (t.isExpress) {
-                            if (MrtDataService.expressStops.includes(arrivedStationCode)) {
+                        t.progress += t.speed * (delta / 16.6);
+
+                        if (t.progress >= 1.0) {
+                            t.progress = 0;
+                            t.segmentIndex += t.direction;
+
+                            if (t.segmentIndex >= t.sequence.length - 1) {
+                                t.segmentIndex = t.sequence.length - 2;
+                                t.direction = -1;
+                            } else if (t.segmentIndex < 0) {
+                                t.segmentIndex = 0;
+                                t.direction = 1;
+                            }
+
+                            const arrivedStationCode = t.sequence[t.segmentIndex];
+                            t.currentStationCode = arrivedStationCode;
+
+                            if (t.isExpress) {
+                                if (MrtDataService.expressStops.includes(arrivedStationCode)) {
+                                    t.isDwelling = true;
+                                    t.dwellTimeRemaining = 3500;
+                                }
+                            } else {
                                 t.isDwelling = true;
                                 t.dwellTimeRemaining = 3500;
                             }
-                        } else {
-                            t.isDwelling = true;
-                            t.dwellTimeRemaining = 3500;
                         }
-                    }
 
-                    const idx1 = t.segmentIndex;
-                    const idx2 = t.segmentIndex + t.direction;
-                    const code1 = t.sequence[idx1];
-                    const code2 = t.sequence[idx2] || t.sequence[idx1];
+                        const idx1 = t.segmentIndex;
+                        const idx2 = t.segmentIndex + t.direction;
+                        const code1 = t.sequence[idx1];
+                        const code2 = t.sequence[idx2] || t.sequence[idx1];
 
-                    const st1 = MrtDataService.stations[code1];
-                    const st2 = MrtDataService.stations[code2];
+                        const st1 = MrtDataService.stations[code1];
+                        const st2 = MrtDataService.stations[code2];
 
-                    if (st1 && st2) {
-                        const lat = st1.lat + (st2.lat - st1.lat) * t.progress;
-                        const lng = st1.lng + (st2.lng - st1.lng) * t.progress;
-                        t.latLng = [lat, lng];
-                        t.marker.setLatLng(t.latLng);
+                        if (st1 && st2) {
+                            const lat = st1.lat + (st2.lat - st1.lat) * t.progress;
+                            const lng = st1.lng + (st2.lng - st1.lng) * t.progress;
+                            t.latLng = [lat, lng];
+                            t.marker.setLatLng(t.latLng);
 
-                        const dy = st2.lat - st1.lat;
-                        const dx = (st2.lng - st1.lng) * Math.cos(st1.lat * Math.PI / 180);
-                        const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
-                        t.angle = angleDeg;
+                            const dy = st2.lat - st1.lat;
+                            const dx = (st2.lng - st1.lng) * Math.cos(st1.lat * Math.PI / 180);
+                            const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+                            t.angle = angleDeg;
 
-                        const pillEl = document.getElementById(`train-pill-${t.id}`);
-                        if (pillEl) {
-                            pillEl.style.transform = `rotate(${-angleDeg}deg)`;
+                            const pillEl = document.getElementById(`train-pill-${t.id}`);
+                            if (pillEl) {
+                                pillEl.style.transform = `rotate(${-angleDeg}deg)`;
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
                 animFrameId = requestAnimationFrame(animate);
             }
@@ -1166,12 +1347,12 @@
 
             function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
 
-            return { init, setLineVisibility, restartEngine };
+            return { init, setLineVisibility, restartEngine, isNighttime };
         })();
 
         /**
          * =========================================================================
-         * 5. UIController: 抬頭面板動態更新、頭末班車時刻表、UI 彈窗與 Purge Refresh
+         * 6. UIController: 動態端點站頭末班車、夜間營運感知、路徑規劃 UI 與 Purge Refresh
          * =========================================================================
          */
         const UIController = (function() {
@@ -1204,13 +1385,40 @@
                 document.getElementById('btnCloseSettingsModal').addEventListener('click', closeSettingsModal);
                 settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettingsModal(); });
 
+                // Route Planner Modal Toggle
+                const routeModal = document.getElementById('routePlannerModal');
+                document.getElementById('btnRoutePlannerToggle').addEventListener('click', openRoutePlannerModal);
+                document.getElementById('btnCloseRoutePlannerModal').addEventListener('click', closeRoutePlannerModal);
+                routeModal.addEventListener('click', (e) => { if (e.target === routeModal) closeRoutePlannerModal(); });
+
                 document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
 
                 initSettingsForm();
                 populateFilterPanel();
                 populateLegendModal();
+                initRoutePlannerForm();
 
-                setInterval(updateClock, 1000);
+                setInterval(updateClockAndNightSensing, 1000);
+                updateClockAndNightSensing();
+            }
+
+            function updateClockAndNightSensing() {
+                const now = new Date();
+                document.getElementById('systemClock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+                
+                const hour = now.getHours();
+                const isNight = hour >= 1 && hour < 6;
+                const badgeEl = document.getElementById('systemOpBadge');
+                const textEl = document.getElementById('systemOpText');
+
+                if (isNight) {
+                    badgeEl.className = "text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 flex items-center gap-1 shrink-0";
+                    textEl.innerText = "🌙 目前為非營運時間 (末班車已收班)";
+                    document.getElementById('activeTrainCount').innerText = "0 (收班)";
+                } else {
+                    badgeEl.className = "text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0";
+                    textEl.innerText = "🟢 全線正常營運";
+                }
             }
 
             function selectStation(code) {
@@ -1296,6 +1504,63 @@
                 });
             }
 
+            function initRoutePlannerForm() {
+                const startSelect = document.getElementById('routeStartSelect');
+                const endSelect = document.getElementById('routeEndSelect');
+                const { stations } = MrtDataService;
+
+                const optionsHtml = Object.entries(stations).map(([code, st]) => {
+                    return `<option value="${code}">${st.name} (${code})</option>`;
+                }).join('');
+
+                startSelect.innerHTML = optionsHtml;
+                endSelect.innerHTML = optionsHtml;
+
+                startSelect.value = "BL12"; // 台北車站
+                endSelect.value = "R03";   // 台北101
+
+                document.getElementById('btnSwapRouteStations').addEventListener('click', () => {
+                    const tmp = startSelect.value;
+                    startSelect.value = endSelect.value;
+                    endSelect.value = tmp;
+                });
+
+                document.getElementById('btnExecuteRouteSearch').addEventListener('click', () => {
+                    const startCode = startSelect.value;
+                    const endCode = endSelect.value;
+
+                    if (startCode === endCode) {
+                        alert("起點站與終點站不能相同！");
+                        return;
+                    }
+
+                    const result = RoutePlanner.findShortestPath(startCode, endCode);
+                    if (result) {
+                        RoutePlanner.drawRouteHighlight(result.path);
+                        
+                        document.getElementById('routeEstTime').innerText = `預估約 ${result.estimatedMinutes} 分鐘`;
+                        document.getElementById('routeStationCount').innerText = `${result.stationCount} 站`;
+
+                        if (result.transfers.length === 0) {
+                            document.getElementById('routeTransfers').innerText = "直達車（無需轉乘）";
+                        } else {
+                            const transferText = result.transfers.map(t => `在 [${t.stationName}] 轉乘 ${MrtDataService.lines[t.toLine].name}`).join('；');
+                            document.getElementById('routeTransfers').innerText = transferText;
+                        }
+
+                        document.getElementById('routeResultCard').classList.remove('hidden');
+                        document.getElementById('btnClearRouteHighlight').classList.remove('hidden');
+                        closeRoutePlannerModal();
+                    }
+                });
+
+                document.getElementById('btnClearRouteHighlight').addEventListener('click', () => {
+                    RoutePlanner.clearHighlight();
+                    document.getElementById('routeResultCard').classList.add('hidden');
+                    document.getElementById('btnClearRouteHighlight').classList.add('hidden');
+                });
+            }
+
             function populateFilterPanel() {
                 const container = document.getElementById('lineFilterContainer');
                 container.innerHTML = Object.entries(MrtDataService.lines).map(([key, info]) => {
@@ -1349,14 +1614,19 @@
             function closeLegendModal() { document.getElementById('legendModal').classList.add('opacity-0', 'pointer-events-none'); }
             function openSettingsModal() { document.getElementById('settingsModal').classList.remove('opacity-0', 'pointer-events-none'); }
             function closeSettingsModal() { document.getElementById('settingsModal').classList.add('opacity-0', 'pointer-events-none'); }
+            function openRoutePlannerModal() { document.getElementById('routePlannerModal').classList.remove('opacity-0', 'pointer-events-none'); }
+            function closeRoutePlannerModal() { document.getElementById('routePlannerModal').classList.add('opacity-0', 'pointer-events-none'); }
 
             function showStationDrawer(code) {
                 const st = MrtDataService.stations[code];
                 if (!st) return;
 
+                const primaryLineKey = st.lines[0];
+                const primaryLineInfo = MrtDataService.lines[primaryLineKey];
                 const shapeObj = MrtDataService.shapes[st.shape] || MrtDataService.shapes.circle;
+                
                 const iconEl = document.getElementById('drawerIcon');
-                iconEl.style.background = MrtDataService.lines[st.lines[0]].color;
+                iconEl.style.background = primaryLineInfo.color;
                 iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 18 18" fill="none">${shapeObj.svg}</svg>`;
 
                 document.getElementById('drawerTitle').innerText = `${st.name} (${code})`;
@@ -1372,28 +1642,52 @@
                     return `<span class="px-2 py-0.5 rounded-md text-[11px] font-bold text-white shadow-sm" style="background:${info.color}">${info.name}</span>`;
                 }).join(' ');
 
-                document.getElementById('drawerBody').innerHTML = `
-                    <div class="flex items-center gap-2 mb-2">${lineChips} ${expressBadge}</div>
-                    <div class="opacity-90">地標類型：<span class="text-emerald-400 font-medium">${shapeObj.desc}</span></div>
-                    <div class="opacity-90">營運狀態：<span class="text-emerald-400 font-bold">🟢 全線營運正常 · 班距 3-5 分鐘</span></div>
-                    
-                    <!-- First & Last Train Schedule Card Section -->
-                    <div class="border-t border-gray-500/20 pt-2.5 mt-2">
-                        <div class="font-bold text-[11px] opacity-75 mb-1.5 flex items-center justify-between">
-                            <span>🕒 首末班車時刻表 (First & Last Train Schedule)</span>
-                            <span class="text-[10px] text-blue-400 font-mono">TDX / TRTC</span>
+                // Build Dynamic Terminus First & Last Train Cards for each line of this station
+                const scheduleCardsHtml = st.lines.map(lineKey => {
+                    const lineInfo = MrtDataService.lines[lineKey];
+                    if (!lineInfo) return '';
+                    const termini = lineInfo.termini || ["起點站", "端點站"];
+                    const startTerminus = termini[0];
+                    const endTerminus = termini[1];
+
+                    return `<div class="bg-gray-500/10 border border-gray-500/15 p-2.5 rounded-xl space-y-1.5">
+                        <div class="font-bold text-xs flex items-center gap-1.5" style="color:${lineInfo.color}">
+                            <span class="w-2 h-2 rounded-full" style="background:${lineInfo.color}"></span>
+                            <span>${lineInfo.name} 首末班車時刻</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-[11px]">
-                            <div class="bg-gray-500/10 border border-gray-500/15 p-2 rounded-xl">
-                                <div class="font-bold text-emerald-400 mb-0.5">往 端點站 方向</div>
+                            <div class="bg-gray-900/40 p-1.5 rounded-lg border border-gray-700/50">
+                                <div class="font-bold text-emerald-400">往 ${endTerminus} 方向</div>
                                 <div>頭班車：<span class="font-mono font-bold">06:00</span></div>
                                 <div>末班車：<span class="font-mono font-bold">24:00</span></div>
                             </div>
-                            <div class="bg-gray-500/10 border border-gray-500/15 p-2 rounded-xl">
-                                <div class="font-bold text-blue-400 mb-0.5">往 起點站 方向</div>
+                            <div class="bg-gray-900/40 p-1.5 rounded-lg border border-gray-700/50">
+                                <div class="font-bold text-blue-400">往 ${startTerminus} 方向</div>
                                 <div>頭班車：<span class="font-mono font-bold">06:00</span></div>
                                 <div>末班車：<span class="font-mono font-bold">00:15</span></div>
                             </div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                const isNight = AnimationEngine.isNighttime();
+                const opStatusTag = isNight 
+                    ? `<span class="text-indigo-300 font-bold">🌙 目前為非營運時間 (末班車已收班)</span>`
+                    : `<span class="text-emerald-400 font-bold">🟢 全線營運正常 · 班距 3-5 分鐘</span>`;
+
+                document.getElementById('drawerBody').innerHTML = `
+                    <div class="flex items-center gap-2 mb-2">${lineChips} ${expressBadge}</div>
+                    <div class="opacity-90">地標類型：<span class="text-emerald-400 font-medium">${shapeObj.desc}</span></div>
+                    <div class="opacity-90">營運狀態：${opStatusTag}</div>
+                    
+                    <!-- Dynamic Terminus First & Last Train Schedule Section -->
+                    <div class="border-t border-gray-500/20 pt-2.5 mt-2">
+                        <div class="font-bold text-[11px] opacity-75 mb-1.5 flex items-center justify-between">
+                            <span>🕒 動態端點站頭末班車時間 (First & Last Train Schedule)</span>
+                            <span class="text-[10px] text-blue-400 font-mono">TDX / TRTC</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${scheduleCardsHtml}
                         </div>
                     </div>
 
@@ -1402,12 +1696,12 @@
                         <div class="font-bold text-[11px] opacity-75 mb-1.5">預計列車即時倒數 (Live Arrival)</div>
                         <div class="space-y-1.5">
                             <div class="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-                                <span class="font-medium text-emerald-400">往 端點站 方向</span>
-                                <span class="font-mono font-bold text-emerald-400">約 2 分鐘</span>
+                                <span class="font-medium text-emerald-400">往 ${primaryLineInfo.termini ? primaryLineInfo.termini[1] : '端點站'} 方向</span>
+                                <span class="font-mono font-bold text-emerald-400">${isNight ? '末班車已駛離' : '約 2 分鐘'}</span>
                             </div>
                             <div class="flex items-center justify-between bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-xl">
-                                <span class="font-medium text-blue-400">往 起點站 方向</span>
-                                <span class="font-mono font-bold text-blue-400">約 4 分鐘</span>
+                                <span class="font-medium text-blue-400">往 ${primaryLineInfo.termini ? primaryLineInfo.termini[0] : '起點站'} 方向</span>
+                                <span class="font-mono font-bold text-blue-400">${isNight ? '末班車已駛離' : '約 4 分鐘'}</span>
                             </div>
                         </div>
                     </div>
@@ -1452,7 +1746,6 @@
 
             function openDrawer() { document.getElementById('infoDrawer').classList.remove('translate-y-96', 'opacity-0'); }
             function closeDrawer() { document.getElementById('infoDrawer').classList.add('translate-y-96', 'opacity-0'); }
-            function updateClock() { document.getElementById('systemClock').innerText = new Date().toLocaleTimeString('zh-TW', { hour12: false }); }
 
             return { init, selectStation, showStationDrawer, showTrainDrawer };
         })();
