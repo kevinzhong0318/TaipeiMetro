@@ -84,7 +84,7 @@ const MapController = (function() {
         bindMapEvents();
 
         // 初始自動感應主題
-        updateAutoTheme(new Date());
+        updateAutoTheme(new Date(), true);
     }
 
     function renderPolylines() {
@@ -194,9 +194,9 @@ const MapController = (function() {
         } else {
             themeMode = 'auto';
             if (window.TimelineController) {
-                updateAutoTheme(TimelineController.getCurrentTimeDate());
+                updateAutoTheme(TimelineController.getCurrentTimeDate(), true);
             } else {
-                updateAutoTheme(new Date());
+                updateAutoTheme(new Date(), true);
             }
         }
     }
@@ -237,7 +237,7 @@ const MapController = (function() {
     /**
      * 依據時間軸虛擬時間與當天台北日出日落，0 毫秒即刻瞬間切換淺色 (Light) 或深色 (Dark) 地圖
      */
-    function updateAutoTheme(dateObj) {
+    function updateAutoTheme(dateObj, force = false) {
         const d = dateObj || new Date();
         const sunInfo = getTaipeiSunriseSunset(d);
 
@@ -246,7 +246,7 @@ const MapController = (function() {
             sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
         }
 
-        if (themeMode !== 'auto') return; // 若為手動鎖定模式則不自動變更
+        if (!force && themeMode !== 'auto') return; // 若非強制且已手動鎖定則不自動變更
 
         const currentMinutes = d.getHours() * 60 + d.getMinutes();
 

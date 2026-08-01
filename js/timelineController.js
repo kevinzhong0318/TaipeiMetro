@@ -132,9 +132,9 @@ const TimelineController = (function() {
             clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
         }
 
-        // 即刻呼叫地圖控制器的台北天文日出日落 0 毫秒極速感應切換
+        // 無條件直連呼叫地圖控制器的台北天文日出日落 0 毫秒極速感應切換
         if (window.MapController) {
-            window.MapController.updateAutoTheme(currentDate);
+            window.MapController.updateAutoTheme(currentDate, true);
         }
 
         // Nighttime sensing check for train operation (00:00 ~ 06:00 非營運時段)
