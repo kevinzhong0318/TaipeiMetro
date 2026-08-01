@@ -12,7 +12,7 @@
 
 本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，將台北捷運 (Taipei Metro TRTC) 各主線、支線、三鶯線以及 **桃園機場捷運 (Taoyuan Airport MRT)**，依據地理座標精確繪製於開源地圖上。
 
-車站依據周邊地標特色劃分為 **9 大 Mini Metro 幾何視覺圖形**，並結合「**Zoom >= 14 車站名稱動態懸浮**」、「**瀏覽器 GPS 即時定位**」以及「**桃園機捷直達特快車 (流線尖頭 SVG 車廂)**」動態運轉。全程式碼採用命名清晰的模組化 JavaScript 架構 (`MapController`, `MrtDataService`, `AnimationEngine`, `UIController`) 撰寫。
+本系統具備「**藍色流線型直達特快車 (定點停靠/過站不停)**」、「**列車到站 3.5 秒停靠載客動畫 (Dwell Time)**」、「**交通部 TDX API 實時串接選單 (OAuth 2.0 & localStorage)**」、「**Zoom >= 14 車站名稱動態懸浮**」與「**GPS 定位**」等核心功能。
 
 全專案整合於單一獨立 `index.html` 檔案中，適合開箱即用與發布於 **GitHub Pages**。
 
@@ -20,84 +20,74 @@
 
 ## ✨ 核心功能與亮點 (Key Features)
 
-### 1. 🔤 站名縮放動態顯示 (Dynamic Station Name on Zoom)
-- **視覺簡潔化**：地圖預設縮小狀態下隱藏站名標籤，避免線條擁擠混亂。
+### 1. 🚅 桃園機捷藍色直達特快車與停靠過站規則 (Blue Express Train & Skipping Rules)
+- **藍色流線型直達車 (Blue Express `#0055AA`)**：
+  - **外觀識別**：藍色流線型新幹線 SVG 車頭，搭配金黃色邊框與「直達」標誌。
+  - **跳站不停靠**：直達車僅停靠 **A1 台北車站、A3 新北產業園區、A8 長庚醫院、A12 機場第一航廈、A13 機場第二航廈** 等大站。中途普通站（如 A2, A4, A5, A6, A7, A9 等）高速通過不安停。
+- **紫色普通車 (Purple Commuter `#84005C`)**：採用標準幾何膠囊圖示，每站皆停靠。
+
+### 2. ⏱️ 列車到站停靠 3.5 秒載客動畫 (Station Dwell Time Animation)
+- 當列車行駛至「需停靠的車站」時，動畫引擎會暫停列車移動 3.5 秒，模擬乘客上下車。
+- 停靠期間，列車卡片與 Drawer 面板標示 **「🟢 車站停靠載客中 (Dwell)」** 動態倒數標籤，停靠結束後繼續沿軌道平滑前行。
+
+### 3. ⚙️ 實時 TDX API 串接設定選單 (TDX Real-time API Settings)
+- Header 新增 **「⚙️ 設定 / Settings」** 按鈕開啟彈窗選單。
+- 支援雙模式切換：
+  - **模擬動態模式 (Mock Mode)**：預設開啟，高禎率動畫沿軌道平滑行駛與 3.5 秒停靠。
+  - **真實 TDX API 模式 (TDX Real-time Mode)**：提供 Client ID & Client Secret 輸入欄位（持久化儲存於 `localStorage`），並透過 OAuth 2.0 (`https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token`) 自動取得 Access Token 串接交通部 TRTC / TYMC 即時位置。
+
+### 4. 🔤 站名縮放動態顯示 (Dynamic Station Name on Zoom)
 - **Zoom Level >= 14**：放大地圖至層級 14 以上時，自動在地圖上懸浮顯示中英文站名標籤，且樣式隨日夜模式動態轉化。
-- **Zoom Level < 14**：縮小層級時再度自動隱藏標籤。
+- **Zoom Level < 14**：縮小層級時自動隱藏標籤。
 
-### 2. 📍 使用者 GPS 定位功能 (User Geolocation)
-- Header 控制列提供 **「定位我 / My Location」** 按鈕。
-- 結合 HTML5 Geolocation API 取得當前 GPS 座標，在地圖上標示**藍色脈衝定位點**與**精度範圍圓圈**。
-- 地圖中心會平滑飛往 (FlyTo) 定位點並設定適當縮放。
+### 5. 📍 使用者 GPS 定位功能 (User Geolocation)
+- 提供 **「定位我 / My Location」** 按鈕，結合 HTML5 Geolocation API 在地圖上標示**藍色脈衝定位點**與**精度範圍圓圈**，並平滑飛往 (FlyTo) 當前位置。
 
-### 3. 🚅 桃園機場捷運與直達特快車 (Taoyuan Airport MRT & Bullet Express)
-- **紫線 (A Line)**：收錄 A1 台北車站、A2 三重、A3 新北產業園區、A8 長庚醫院、A12 第一航廈、A13 第二航廈、A18 高鐵桃園站、A22 老街溪等車站。
-- **直達特快車與普通車雙軌運轉**：
-  - **普通車**：採用標準幾何膠囊列車圖示沿線行駛。
-  - **直達特快車**：採用特殊**流線型尖頭新幹線/高速列車頭 SVG 車廂**與「直達」標誌，顯眼易區分。
-
-### 4. 🌙 日間 / 夜間模式切換 (Day / Dark Mode)
-- 地圖底圖使用 CartoDB 開源底圖：
-  - 日間模式：`CartoDB Positron`
-  - 夜間模式：`CartoDB Dark Matter`
-- UI 面板、站名標籤與 SVG 圖形邊框動態隨主題響應。
-
-### 5. 📐 精緻 18px Mini Metro 車站幾何圖形
-- **圓形 (Circle)**：住宅區（古亭、江子翠、木柵）
-- **正方形 (Square)**：主要轉乘/鐵路大站（台北車站、板橋、南港）
-- **三角形 (Triangle)**：商圈/購物中心（西門、中山、忠孝復興、林口 Outlet）
-- **十字形 (Cross)**：醫院與醫療園區（台大醫院、石牌、長庚醫院 A8）
-- **星形 (Star)**：景點/觀光區（淡水、動物園、台北101/世貿）
-- **五角形 (Pentagon)**：國際機場專用（松山機場 BR12、機捷航廈 A12/A13）
-- **菱形 (Diamond)**：公園/綠地風景區（大安森林公園、象山、老街溪 A22）
-- **橢圓形/體育館形 (Stadium)**：大學文教區 (公館、輔大) 與體育園區 (小巨蛋、機捷體大 A7)
-- **倒鑽石形 (Inverted Diamond)**：金融/商業園區（南京復興、松江南京）
+### 6. 📐 精緻 18px Mini Metro 車站幾何圖形 (9 大特色)
+- 圓形 (Circle)、正方形 (Square)、三角形 (Triangle)、十字形 (Cross)、星形 (Star)、五角形 (Pentagon)、菱形 (Diamond)、體育館形 (Stadium)、倒鑽石形 (Inverted Diamond)。
 
 ---
 
 ## 🏗️ 模組化 JavaScript 架構 (Modular Code Structure)
 
-本專案採用結構化的 JavaScript 模組設計：
 - **`MapController`**：管理 Leaflet 地圖實例、CartoDB 底圖切換、Zoom 縮放監聽與 GPS 定位邏輯。
-- **`MrtDataService`**：大台北捷運與桃園機捷路線、車站座標與 9 大幾何圖形資料矩陣。
-- **`AnimationEngine`**：高禎率列車動畫循環、向量角度旋轉與直達車 (Bullet Express) SVG 渲染。
-- **`UIController`**：圖例 Modal 視窗、路線篩選選單、車站與列車資訊抽屜 Drawer 面板。
-- **`TDX_API_STUB`**：交通部 TDX 運輸資料流通服務 OAuth2 與即時位置 API 說明。
+- **`MrtDataService`**：大台北捷運與桃園機捷路線、車站座標、9 大幾何圖形與直達車停靠大站對應矩陣。
+- **`TDXService`**：OAuth 2.0 Access Token 取得、`localStorage` 儲存與 TDX API 位置輪詢。
+- **`AnimationEngine`**：高禎率列車動畫循環、藍色直達車跳站邏輯與 3.5 秒到站停靠 (Dwell Time) 計時器。
+- **`UIController`**：設定 Modal 彈窗、圖例 Modal 視窗、路線篩選選單與 Drawer 資訊面板。
 
 ---
 
 ## 🌿 Git Branching Workflow 開發流程指引
 
-在開發新功能時，建議遵循標準 Git 分支工作流 (Git Branching Workflow)：
+在開發新功能分支（例如 `feature/express-train-tdx`）時，請遵循以下 Git 操作流程：
 
 ```bash
-# 1. 確保位於 main 分支並同步最新程式碼
+# 1. 切換至 main 分支並拉取最新遠端程式碼
 git checkout main
 git pull origin main
 
-# 2. 建立並切換至新功能分支 (例如：feature/airport-mrt-express)
-git checkout -b feature/airport-mrt-express
+# 2. 建立並切換至新功能分支
+git checkout -b feature/express-train-tdx
 
-# 3. 進行程式碼修改與功能測試
-
-# 4. 檢視修改狀態並 Commit 變更
+# 3. 進行程式碼開發、測試確認無誤後 Commit
 git status
 git add .
-git commit -m "feat: add Taoyuan Airport MRT line, bullet express train & zoom labels"
+git commit -m "feat: add blue express train, station dwell animation & TDX settings modal"
 
-# 5. 上傳新功能分支至 GitHub 遠端
-git push -u origin feature/airport-mrt-express
+# 4. 推送功能分支至 GitHub 遠端
+git push -u origin feature/express-train-tdx
 
-# 6. 測試確認無誤後，切換回 main 分支並安全合併 (Merge)
+# 5. 切換回 main 分支並進行安全合併 (Merge)
 git checkout main
-git merge --no-ff feature/airport-mrt-express -m "merge: feature/airport-mrt-express into main"
+git merge --no-ff feature/express-train-tdx -m "merge: feature/express-train-tdx into main"
 
-# 7. 推送最新 main 分支至遠端
+# 6. 將最新 main 分支推送至 GitHub 遠端
 git push origin main
 
-# 8. (選用) 刪除已合併的功能分支
-git branch -d feature/airport-mrt-express
-git push origin --delete feature/airport-mrt-express
+# 7. (選用) 刪除已合併的分支
+git branch -d feature/express-train-tdx
+git push origin --delete feature/express-train-tdx
 ```
 
 ---
@@ -116,7 +106,7 @@ git push origin --delete feature/airport-mrt-express
 1. 推送至 GitHub：
    ```bash
    git add .
-   git commit -m "feat: release V3 Metro & Airport MRT Live Map"
+   git commit -m "feat: release V4 Express Train & TDX API SPA"
    git push origin main
    ```
 2. 前往 Repository 頁面 -> **Settings** -> **Pages**。
