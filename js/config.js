@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/config.js - 捷運與機捷路線車站數據服務 (MrtDataService)
- * 包含中和新蘆線蘆洲支線 (O_Luzhou)、三鶯線 12 站、機捷 A13 特快車迴轉、端點站與 9 大幾何圖形
+ * 包含機捷特快車 (紫色 #84005C)、中和新蘆線蘆洲支線 (O_Luzhou)、三鶯線 12 站、端點站與 9 大幾何圖形
  * =========================================================================
  */
 const MrtDataService = (function() {
@@ -17,7 +17,7 @@ const MrtDataService = (function() {
         Y:    { name: "環狀線", color: "#FFD100", weight: 6, termini: ["大坪林", "新北產業園區"] },
         LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鶯桃福德"] },
         A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6, termini: ["台北車站", "老街溪"] },
-        A_Express: { name: "桃園機捷 (藍色直達車)", color: "#0055AA", weight: 6, isExpress: true, termini: ["台北車站", "機場第二航廈"] }
+        A_Express: { name: "桃園機捷 (直達車)", color: "#84005C", weight: 6, isExpress: true, termini: ["台北車站", "機場第二航廈"] }
     };
 
     const shapes = {

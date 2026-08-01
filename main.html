@@ -21,7 +21,7 @@
                         metroY: '#FFD100',
                         metroLb: '#76B7B2',
                         metroA: '#84005C',
-                        metroAExpress: '#0055AA',
+                        metroAExpress: '#84005C',
                     },
                     fontFamily: {
                         sans: ['Noto Sans TC', 'Inter', 'sans-serif'],
@@ -53,7 +53,7 @@
         <!-- App Brand & Station Selection Dynamic Header Badge -->
         <div id="headerBrandBadge" class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto flex items-center justify-between gap-4 shadow-xl transition-all duration-300">
             <div class="flex items-center gap-3">
-                <div id="brandIcon" class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-emerald-600 flex items-center justify-center shadow-md shrink-0 transition-colors duration-300">
+                <div id="brandIcon" class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-600 flex items-center justify-center shadow-md shrink-0 transition-colors duration-300">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2C7 2 4 3.5 4 8.5V16c0 1.5 1 2.5 2.5 2.5L5 20.5h14l-1.5-2c1.5 0 2.5-1 2.5-2.5V8.5C20 3.5 17 2 12 2z"/>
                         <circle cx="8" cy="14" r="1.5" fill="white"/>
@@ -106,7 +106,7 @@
             </button>
 
             <!-- TDX Real-time API Settings Button -->
-            <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源與台北日出日落設定">
+            <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源設定">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span>設定</span>
             </button>
@@ -128,10 +128,10 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             </button>
 
-            <!-- Day / Dark Mode Toggle Button (Supports Astronomical Auto & Manual) -->
+            <!-- Day / Dark Mode Toggle Button (Manual Stable Theme Toggle) -->
             <button id="btnThemeToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all flex items-center gap-1.5">
                 <span id="themeIcon">🌙</span>
-                <span id="themeText">夜間模式 (自動)</span>
+                <span id="themeText">夜間模式</span>
             </button>
 
         </div>
@@ -229,7 +229,7 @@
         </div>
     </div>
 
-    <!-- TDX Real-time API & Day/Night Mode Settings Modal Dialog -->
+    <!-- TDX Real-time API Settings Modal Dialog -->
     <div id="settingsModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
         <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
             
@@ -240,26 +240,11 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-bold">系統設定 & 台北日出日落切換控制</h2>
-                        <p class="text-xs opacity-75">依據台北地理座標精確計算當天日出日落時間</p>
+                        <h2 class="text-base font-bold">系統數據源與設定</h2>
+                        <p class="text-xs opacity-75">可自由切換模擬運轉與真實 TDX API 即時輪詢</p>
                     </div>
                 </div>
                 <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
-            </div>
-
-            <!-- Day / Night Mode Auto vs Manual Selection -->
-            <div class="mb-5 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl p-4 space-y-2">
-                <div class="text-xs font-bold text-indigo-300 flex items-center justify-between">
-                    <span>🌗 日夜模式自動感應設定</span>
-                    <span id="themeModeBadge" class="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-400/40 text-indigo-300">日出日落自動感應</span>
-                </div>
-                <div id="taipeiSunInfoText" class="text-[11px] font-mono text-emerald-400 font-medium">
-                    🌅 今日日出 --:-- · 🌇 日落 --:--
-                </div>
-                <div class="flex items-center gap-3 pt-1">
-                    <button id="btnSetThemeAuto" class="flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all">自動模式 (精確天文日出日落)</button>
-                    <button id="btnSetThemeManual" class="flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">手動鎖定模式</button>
-                </div>
             </div>
 
             <!-- Radio Select Data Source Mode -->
@@ -336,7 +321,7 @@
             <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-gray-500/20 pb-4 mb-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     </div>
                     <div>
@@ -353,21 +338,21 @@
             </div>
 
             <!-- Express Train & Dwell Rules Legend Banner -->
-            <div class="bg-blue-950/40 border border-blue-500/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
-                <div class="w-10 h-8 rounded-xl bg-blue-900 border border-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <div class="bg-purple-950/40 border border-purple-500/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
+                <div class="w-10 h-8 rounded-xl bg-purple-900 border border-amber-400 flex items-center justify-center shrink-0 mt-0.5">
                     <svg width="28" height="12" viewBox="0 0 32 13" fill="none">
-                        <path d="M2,6.5 C2,3.5 5,1 10,1 L26,1 C29,1 31,3.5 31,6.5 C31,9.5 29,12 26,12 L10,12 C5,12 2,9.5 2,6.5 Z" fill="#0055AA" stroke="#FFD100" stroke-width="1.5"/>
+                        <path d="M2,6.5 C2,3.5 5,1 10,1 L26,1 C29,1 31,3.5 31,6.5 C31,9.5 29,12 26,12 L10,12 C5,12 2,9.5 2,6.5 Z" fill="#84005C" stroke="#FFD100" stroke-width="1.5"/>
                         <path d="M12,4 L24,4 A2,2 0 0,1 26,6 L26,7 A2,2 0 0,1 24,9 L12,9 Z" fill="#ffffff" opacity="0.9"/>
                         <circle cx="28" cy="6.5" r="1.5" fill="#FFD100"/>
                     </svg>
                 </div>
                 <div class="space-y-1">
                     <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                        <span>機捷藍色直達車 (A01台北車站 ↔ A13機場第二航廈)</span>
-                        <span class="text-[10px] bg-blue-500/20 border border-blue-400/40 px-1 py-0.2 rounded text-blue-300">藍色流線車頭</span>
+                        <span>機捷紫色直達車 (A01台北車站 ↔ A13機場第二航廈)</span>
+                        <span class="text-[10px] bg-purple-500/20 border border-purple-400/40 px-1 py-0.2 rounded text-purple-300">紫色流線車頭</span>
                     </div>
                     <p class="text-[11px] opacity-90 leading-relaxed">
-                        • <strong>迴轉區間</strong>：藍色直達特快車於 A01台北車站與 A13機場第二航廈之間定點停靠折返。<br>
+                        • <strong>迴轉區間</strong>：紫色直達特快車於 A01台北車站與 A13機場第二航廈之間定點停靠折返。<br>
                         • <strong>跳站規則</strong>：僅停靠 A1台北車站、A3新北產業園區、A8長庚醫院、A12第一航廈、A13第二航廈。中途站不停靠高速通過。
                     </p>
                 </div>

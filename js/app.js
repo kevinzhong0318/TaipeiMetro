@@ -106,11 +106,11 @@ const AnimationEngine = (function() {
             html = `<div class="express-bullet-train" id="train-pill-${train.id}">
                 <div class="relative flex items-center">
                     <svg width="32" height="13" viewBox="0 0 32 13" fill="none">
-                        <path d="M2,6.5 C2,3.5 5,1 10,1 L26,1 C29,1 31,3.5 31,6.5 C31,9.5 29,12 26,12 L10,12 C5,12 2,9.5 2,6.5 Z" fill="#0055AA" stroke="#FFD100" stroke-width="1.5"/>
+                        <path d="M2,6.5 C2,3.5 5,1 10,1 L26,1 C29,1 31,3.5 31,6.5 C31,9.5 29,12 26,12 L10,12 C5,12 2,9.5 2,6.5 Z" fill="#84005C" stroke="#FFD100" stroke-width="1.5"/>
                         <path d="M12,4 L24,4 A2,2 0 0,1 26,6 L26,7 A2,2 0 0,1 24,9 L12,9 Z" fill="#ffffff" opacity="0.9"/>
                         <circle cx="28" cy="6.5" r="1.5" fill="#FFD100"/>
                     </svg>
-                    <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold bg-blue-900 text-amber-300 border border-amber-400/50 px-1 py-0 rounded leading-none shadow">直達</span>
+                    <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-bold bg-purple-950 text-amber-300 border border-amber-400/50 px-1 py-0 rounded leading-none shadow">直達</span>
                 </div>
             </div>`;
         } else {
@@ -248,25 +248,6 @@ const UIController = (function() {
         document.getElementById('btnThemeToggle').addEventListener('click', MapController.toggleTheme);
         document.getElementById('btnLocationToggle').addEventListener('click', MapController.locateUser);
         document.getElementById('btnResetView').addEventListener('click', MapController.resetView);
-
-        const btnAuto = document.getElementById('btnSetThemeAuto');
-        const btnManual = document.getElementById('btnSetThemeManual');
-
-        if (btnAuto && btnManual) {
-            btnAuto.addEventListener('click', () => {
-                MapController.setThemeMode('auto');
-                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
-                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
-                const currentDate = TimelineController.getCurrentTimeDate();
-                MapController.updateAutoTheme(currentDate);
-            });
-
-            btnManual.addEventListener('click', () => {
-                MapController.setThemeMode('manual');
-                btnManual.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white transition-all";
-                btnAuto.className = "flex-1 py-1.5 rounded-xl text-xs font-bold bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all";
-            });
-        }
 
         // Filter Panel Toggle
         const btnFilter = document.getElementById('btnFilterToggle');
@@ -449,7 +430,7 @@ const UIController = (function() {
         container.innerHTML = Object.entries(MrtDataService.lines).map(([key, info]) => {
             const trialTag = info.isTrial ? '<span class="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">試營運</span>' : '';
             const branchTag = info.isBranch ? '<span class="text-[10px] bg-gray-500/20 opacity-75 border border-gray-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">支線</span>' : '';
-            const expressTag = info.isExpress ? '<span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">藍色直達</span>' : '';
+            const expressTag = info.isExpress ? '<span class="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.2 rounded ml-auto font-mono">紫色直達</span>' : '';
 
             return `<label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-500/10 hover:bg-gray-500/20 cursor-pointer text-xs transition-all">
                 <input type="checkbox" checked value="${key}" class="line-checkbox rounded text-emerald-500 focus:ring-0">
@@ -517,7 +498,7 @@ const UIController = (function() {
 
         const isExpressStop = MrtDataService.expressStops.includes(code);
         const expressBadge = st.lines.includes("A") 
-            ? (isExpressStop ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-600 text-amber-300 border border-amber-400/50">⚡ 直達車停靠站</span>' : '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-600 text-gray-300">普通車停靠站 (直達過站不停)</span>')
+            ? (isExpressStop ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-900 text-amber-300 border border-amber-400/50">⚡ 直達車停靠站</span>' : '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-600 text-gray-300">普通車停靠站 (直達過站不停)</span>')
             : '';
 
         const lineChips = st.lines.map(lk => {
@@ -593,12 +574,12 @@ const UIController = (function() {
     function showTrainDrawer(train) {
         const lineInfo = MrtDataService.lines[train.sequenceKey] || MrtDataService.lines[train.lineKey];
         const iconEl = document.getElementById('drawerIcon');
-        iconEl.style.background = train.isExpress ? "#0055AA" : lineInfo.color;
+        iconEl.style.background = train.isExpress ? "#84005C" : lineInfo.color;
         iconEl.innerHTML = train.isExpress 
             ? `<span class="text-amber-300 font-bold text-xs">直達</span>`
             : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2C7 2 4 3.5 4 8.5V16c0 1.5 1 2.5 2.5 2.5L5 20.5h14l-1.5-2c1.5 0 2.5-1 2.5-2.5V8.5C20 3.5 17 2 12 2z"/><circle cx="8" cy="14" r="1.5"/><circle cx="16" cy="14" r="1.5"/></svg>`;
 
-        const typeTitle = train.isExpress ? "桃園機捷 藍色直達特快車" : "普通車";
+        const typeTitle = train.isExpress ? "桃園機捷 紫色直達特快車" : "普通車";
         document.getElementById('drawerTitle').innerText = `列車 ${train.id} (${typeTitle})`;
         document.getElementById('drawerSubtitle').innerText = `${lineInfo.name} · ${train.isExpress ? '極速 100 km/h (僅停 A1, A3, A8, A12, A13 於 A13 迴轉)' : '每站皆停'}`;
 
@@ -617,7 +598,7 @@ const UIController = (function() {
             <div class="space-y-1.5 opacity-90 mt-2">
                 <div>當前位置：<span class="font-bold">${MrtDataService.stations[currentCode].name} (${currentCode})</span></div>
                 <div>前進行向：<span class="font-bold">➔ ${MrtDataService.stations[nextCode].name} (${nextCode})</span></div>
-                <div>車廂類型：<span class="text-amber-400 font-bold">${train.isExpress ? '⚡ 藍色流線型直達車 (A01 台北車站 ↔ A13 機場第二航廈迴轉)' : '紫色普通車 (每站皆停)'}</span></div>
+                <div>車廂類型：<span class="text-purple-400 font-bold">${train.isExpress ? '⚡ 紫色流線型直達車 (A01 台北車站 ↔ A13 機場第二航廈迴轉)' : '紫色普通車 (每站皆停)'}</span></div>
             </div>
         `;
 
