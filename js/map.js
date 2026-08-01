@@ -1,14 +1,15 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、台北天文精確日出日落自動切換日夜模式 (Auto/Manual)、Zoom 14 站名與 GPS 定位
- * 拖曳左下角時間軸時會隨當日台北日出日落時間自動動態切換淺色與深色模式
+ * js/map.js - Leaflet 地圖初始化、雙圖層預載 (0ms極速瞬間切換)、台北天文精確日出日落自動切換日夜模式
+ * 拖曳左下角時間軸時，一到當日台北日出/日落時間點 0 毫秒即刻瞬間切換淺色/深色模式
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
-    let themeMode = 'auto';    // 'auto' (日出日落與時間軸自動感知) | 'manual' (手動強制鎖定)
-    let tileLayer = null;
+    let themeMode = 'auto';    // 'auto' (日出日落自動感應) | 'light' (手動日間) | 'dark' (手動夜間)
+    let darkTileLayer = null;
+    let lightTileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
     let polylines = {};
@@ -74,10 +75,9 @@ const MapController = (function() {
         // Add Zoom Control to bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        tileLayer = L.tileLayer(tiles.dark.url, {
-            attribution: tiles.dark.attribution,
-            maxZoom: 19
-        }).addTo(map);
+        // 預先加載雙圖層（Dark Matter 與 Voyager），實現 0 毫秒極速瞬間無縫切換
+        darkTileLayer = L.tileLayer(tiles.dark.url, { attribution: tiles.dark.attribution, maxZoom: 19, opacity: 1 }).addTo(map);
+        lightTileLayer = L.tileLayer(tiles.light.url, { attribution: tiles.light.attribution, maxZoom: 19, opacity: 0 }).addTo(map);
 
         renderPolylines();
         renderStations();
@@ -181,16 +181,40 @@ const MapController = (function() {
         });
     }
 
+    /**
+     * 右上角主題按鈕：三階循環切換【🌗 日夜自動感應 ➔ ☀️ 日間模式 ➔ 🌙 夜間模式】
+     */
     function toggleTheme() {
-        themeMode = 'manual'; // 手動點擊改為手動鎖定模式
-        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        applyTheme(nextTheme);
+        if (themeMode === 'auto') {
+            themeMode = 'light';
+            applyTheme('light');
+        } else if (themeMode === 'light') {
+            themeMode = 'dark';
+            applyTheme('dark');
+        } else {
+            themeMode = 'auto';
+            if (window.TimelineController) {
+                updateAutoTheme(TimelineController.getCurrentTimeDate());
+            } else {
+                updateAutoTheme(new Date());
+            }
+        }
     }
 
+    /**
+     * 0 毫秒極速切換地圖與 UI 主題 (透明度無縫淡入淡出)
+     */
     function applyTheme(theme) {
         currentTheme = theme;
-        if (tileLayer && tiles[theme]) {
-            tileLayer.setUrl(tiles[theme].url);
+
+        if (darkTileLayer && lightTileLayer) {
+            if (theme === 'light') {
+                lightTileLayer.setOpacity(1);
+                darkTileLayer.setOpacity(0);
+            } else {
+                darkTileLayer.setOpacity(1);
+                lightTileLayer.setOpacity(0);
+            }
         }
 
         const htmlEl = document.documentElement;
@@ -200,18 +224,18 @@ const MapController = (function() {
         if (theme === 'light') {
             htmlEl.classList.remove('dark');
             htmlEl.classList.add('light');
-            if (themeIcon) themeIcon.innerText = '☀️';
+            if (themeIcon) themeIcon.innerText = themeMode === 'auto' ? '🌗' : '☀️';
             if (themeText) themeText.innerText = themeMode === 'auto' ? '日間模式 (自動)' : '日間模式 (手動)';
         } else {
             htmlEl.classList.remove('light');
             htmlEl.classList.add('dark');
-            if (themeIcon) themeIcon.innerText = '🌙';
+            if (themeIcon) themeIcon.innerText = themeMode === 'auto' ? '🌗' : '🌙';
             if (themeText) themeText.innerText = themeMode === 'auto' ? '夜間模式 (自動)' : '夜間模式 (手動)';
         }
     }
 
     /**
-     * 依據時間軸虛擬時間與當天台北日出日落，自動切換淺色 (Light) 或深色 (Dark) 地圖
+     * 依據時間軸虛擬時間與當天台北日出日落，0 毫秒即刻瞬間切換淺色 (Light) 或深色 (Dark) 地圖
      */
     function updateAutoTheme(dateObj) {
         const d = dateObj || new Date();
@@ -222,11 +246,11 @@ const MapController = (function() {
             sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
         }
 
-        if (themeMode !== 'auto') return; // 若已手動點擊鎖定則不自動切換
+        if (themeMode !== 'auto') return; // 若為手動鎖定模式則不自動變更
 
         const currentMinutes = d.getHours() * 60 + d.getMinutes();
 
-        // 依據台北當日實際日出與日落時間精確判定日夜主題
+        // 精確判定當前時間是否介於日出與日落時間之間
         const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
         const targetTheme = isDaytime ? 'light' : 'dark';
 
@@ -236,10 +260,10 @@ const MapController = (function() {
     }
 
     function setThemeMode(mode) {
-        themeMode = mode; // 'auto' | 'manual'
+        themeMode = mode; // 'auto' | 'light' | 'dark'
         const badge = document.getElementById('themeModeBadge');
         if (badge) {
-            badge.innerText = mode === 'auto' ? '日出日落自動感應' : '手動鎖定';
+            badge.innerText = mode === 'auto' ? '日出日落自動感應' : (mode === 'light' ? '日間手動鎖定' : '夜間手動鎖定');
         }
     }
 

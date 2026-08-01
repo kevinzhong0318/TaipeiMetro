@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/timelineController.js - 自訂時間選擇器與列車 1x/5x/10x/50x/100x/500x 倍速播放控制器
- * 調整時間軸時自動連動台北天文日出日落，動態切換淺色與深色地圖
+ * 調整時間軸一跨越日出/日落時間點，0 毫秒即刻動態切換淺色與深色地圖模式
  * =========================================================================
  */
 const TimelineController = (function() {
@@ -122,7 +122,7 @@ const TimelineController = (function() {
                 }
             }
             updateUI();
-        }, 300);
+        }, 150); // 150ms 禎率即時比對與瞬間切換
     }
 
     function updateUI() {
@@ -132,7 +132,7 @@ const TimelineController = (function() {
             clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
         }
 
-        // 呼叫地圖控制器的台北天文日出日落自動感應切換
+        // 即刻呼叫地圖控制器的台北天文日出日落 0 毫秒極速感應切換
         if (window.MapController) {
             window.MapController.updateAutoTheme(currentDate);
         }
