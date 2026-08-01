@@ -1,12 +1,13 @@
 /**
  * =========================================================================
- * js/map.js - Leaflet 地圖初始化、固定風格與手動切換 (Light/Dark)、Zoom 14 站名與 GPS 定位
- * 地圖底圖不會隨日出日落或時間推進而自動變更，保持視覺高度穩定
+ * js/map.js - Leaflet 地圖初始化、台北天文精確日出日落自動切換日夜模式 (Auto/Manual)、Zoom 14 站名與 GPS 定位
+ * 拖曳左下角時間軸時會隨日出日落時間自動動態切換淺色與深色模式
  * =========================================================================
  */
 const MapController = (function() {
     let map = null;
     let currentTheme = 'dark'; // 'dark' | 'light'
+    let themeMode = 'auto';    // 'auto' (日出日落與時間軸自動感知) | 'manual' (手動強制鎖定)
     let tileLayer = null;
     let stationMarkers = {};
     let stationTextLabels = {};
@@ -23,6 +24,44 @@ const MapController = (function() {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }
     };
+
+    /**
+     * 根據台北地理座標 (25.0463° N, 121.5175° E) 與日期，精確計算當天日出與日落時間
+     */
+    function getTaipeiSunriseSunset(dateObj) {
+        const d = dateObj || new Date();
+        const start = new Date(d.getFullYear(), 0, 0);
+        const diff = d - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+
+        const lat = 25.0463;
+        const lng = 121.5175;
+        const rad = Math.PI / 180;
+
+        const dec = 23.45 * Math.sin(2 * Math.PI * (284 + dayOfYear) / 365) * rad;
+        const cosHa = -Math.tan(lat * rad) * Math.tan(dec);
+        const ha = Math.acos(Math.max(-1, Math.min(1, cosHa)));
+
+        const lngCorrection = (120 - lng) * 4 / 60; // 台北 UTC+8 赤經修正
+        const sunriseHour = 12 - (ha * 180 / Math.PI) / 15 + lngCorrection;
+        const sunsetHour = 12 + (ha * 180 / Math.PI) / 15 + lngCorrection;
+
+        const srMin = Math.round(sunriseHour * 60);
+        const ssMin = Math.round(sunsetHour * 60);
+
+        const srH = String(Math.floor(srMin / 60)).padStart(2, '0');
+        const srM = String(srMin % 60).padStart(2, '0');
+        const ssH = String(Math.floor(ssMin / 60)).padStart(2, '0');
+        const ssM = String(ssMin % 60).padStart(2, '0');
+
+        return {
+            sunriseMinutes: srMin,
+            sunsetMinutes: ssMin,
+            sunriseFormatted: `${srH}:${srM}`,
+            sunsetFormatted: `${ssH}:${ssM}`
+        };
+    }
 
     function init() {
         map = L.map('map', {
@@ -140,6 +179,7 @@ const MapController = (function() {
     }
 
     function toggleTheme() {
+        themeMode = 'manual'; // 手動點擊改為手動鎖定模式
         const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
         applyTheme(nextTheme);
     }
@@ -156,19 +196,47 @@ const MapController = (function() {
             htmlEl.classList.remove('dark');
             htmlEl.classList.add('light');
             if (themeIcon) themeIcon.innerText = '☀️';
-            if (themeText) themeText.innerText = '日間模式';
+            if (themeText) themeText.innerText = themeMode === 'auto' ? '日間模式 (自動)' : '日間模式 (手動)';
         } else {
             htmlEl.classList.remove('light');
             htmlEl.classList.add('dark');
             if (themeIcon) themeIcon.innerText = '🌙';
-            if (themeText) themeText.innerText = '夜間模式';
+            if (themeText) themeText.innerText = themeMode === 'auto' ? '夜間模式 (自動)' : '夜間模式 (手動)';
         }
     }
 
-    // 不會隨日出日落或時間推進自動更換地圖底圖，地圖視覺保持穩定
+    /**
+     * 依據時間軸虛擬時間與當天台北日出日落，自動切換淺色 (Light) 或深色 (Dark) 地圖
+     */
     function updateAutoTheme(dateObj) {
-        // No auto-switching of map tiles based on sunrise/sunset
+        if (themeMode !== 'auto') return; // 若已手動點擊鎖定則不自動切換
+        const d = dateObj || new Date();
+        const sunInfo = getTaipeiSunriseSunset(d);
+        const currentMinutes = d.getHours() * 60 + d.getMinutes();
+
+        // 依據台北當日實際日出與日落時間精確判定日夜主題
+        const isDaytime = currentMinutes >= sunInfo.sunriseMinutes && currentMinutes < sunInfo.sunsetMinutes;
+        const targetTheme = isDaytime ? 'light' : 'dark';
+
+        const sunInfoEl = document.getElementById('taipeiSunInfoText');
+        if (sunInfoEl) {
+            sunInfoEl.innerText = `🌅 今日日出 ${sunInfo.sunriseFormatted} · 🌇 日落 ${sunInfo.sunsetFormatted}`;
+        }
+
+        if (targetTheme !== currentTheme) {
+            applyTheme(targetTheme);
+        }
     }
+
+    function setThemeMode(mode) {
+        themeMode = mode; // 'auto' | 'manual'
+        const badge = document.getElementById('themeModeBadge');
+        if (badge) {
+            badge.innerText = mode === 'auto' ? '日出日落自動感應' : '手動鎖定';
+        }
+    }
+
+    function getThemeMode() { return themeMode; }
 
     function locateUser() {
         if (!navigator.geolocation) {
@@ -233,6 +301,9 @@ const MapController = (function() {
         getPolylines: () => polylines,
         toggleTheme,
         updateAutoTheme,
+        getTaipeiSunriseSunset,
+        setThemeMode,
+        getThemeMode,
         locateUser,
         resetView,
         renderPolylines,

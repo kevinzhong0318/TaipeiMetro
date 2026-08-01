@@ -1,7 +1,7 @@
 /**
  * =========================================================================
  * js/timelineController.js - 自訂時間選擇器與列車 1x/5x/10x/50x/100x/500x 倍速播放控制器
- * 徹底解開時間軸與日夜模式連動，調整時間軸 100% 不會改變地圖主題
+ * 調整時間軸時自動連動台北天文日出日落，動態切換淺色與深色地圖
  * =========================================================================
  */
 const TimelineController = (function() {
@@ -130,6 +130,11 @@ const TimelineController = (function() {
         const clockEl = document.getElementById('systemClock');
         if (clockEl) {
             clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        // 呼叫地圖控制器的台北天文日出日落自動感應切換
+        if (window.MapController) {
+            window.MapController.updateAutoTheme(currentDate);
         }
 
         // Nighttime sensing check for train operation (00:00 ~ 06:00 非營運時段)
