@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大台北捷運 & 機場捷運 即時動態地圖 | Mini Metro Style</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        metroBr: '#C48C31',
+                        metroR: '#E3002C',
+                        metroG: '#009065',
+                        metroO: '#F8B61C',
+                        metroBl: '#0070BD',
+                        metroY: '#FFD100',
+                        metroLb: '#76B7B2',
+                        metroA: '#84005C',
+                        metroAExpress: '#84005C',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'Inter', 'sans-serif'],
+                        display: ['Oswald', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Custom Modular CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="select-none">
+
+    <!-- Leaflet Map Container -->
+    <div id="map"></div>
+
+    <!-- Header Navigation Bar -->
+    <header class="fixed top-3 left-3 right-3 z-[1000] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pointer-events-none">
+        
+        <!-- App Brand & Station Selection Dynamic Header Badge -->
+        <div id="headerBrandBadge" class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto flex items-center justify-between gap-4 shadow-xl transition-all duration-300">
+            <div class="flex items-center gap-3">
+                <div id="brandIcon" class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-600 flex items-center justify-center shadow-md shrink-0 transition-colors duration-300">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2C7 2 4 3.5 4 8.5V16c0 1.5 1 2.5 2.5 2.5L5 20.5h14l-1.5-2c1.5 0 2.5-1 2.5-2.5V8.5C20 3.5 17 2 12 2z"/>
+                        <circle cx="8" cy="14" r="1.5" fill="white"/>
+                        <circle cx="16" cy="14" r="1.5" fill="white"/>
+                        <line x1="4" y1="10" x2="20" y2="10"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 id="brandTitle" class="font-display text-base sm:text-lg font-bold tracking-wide leading-none transition-colors duration-300">大台北捷運 & 機場捷運</h1>
+                        
+                        <!-- System Operation Status Indicator -->
+                        <span id="systemOpBadge" class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span id="systemOpText">🟢 全線正常營運 (06:00~24:00)</span>
+                        </span>
+
+                        <!-- API Connection Status Badge -->
+                        <span id="dataSourceBadge" class="text-xs font-normal text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 flex items-center gap-1 shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                            <span>🟡 模擬數據運行中</span>
+                        </span>
+                    </div>
+                    <p id="brandSubtitle" class="text-[11px] opacity-80 font-mono mt-1 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-live"></span>
+                        <span id="systemClock">00:00:00</span> · <span id="zoomIndicator">Zoom: 12.5</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mobile Quick Line Filter Badge Count -->
+            <div class="sm:hidden text-xs font-mono opacity-80">
+                <span id="activeTrainCount">0</span> 列車在線
+            </div>
+        </div>
+
+        <!-- Right Side Controls: Route Planner, GPS Location, Settings Modal, Legend, Filter & Direct Day/Night Toggle -->
+        <div class="glass-panel rounded-2xl px-3 py-2 pointer-events-auto flex flex-wrap items-center gap-2 shadow-xl self-end sm:self-auto">
+            
+            <!-- Route Planner Button -->
+            <button id="btnRoutePlannerToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all flex items-center gap-1.5" title="站對站路徑與轉乘規劃">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg>
+                <span>路徑規劃</span>
+            </button>
+
+            <!-- User Location GPS Button -->
+            <button id="btnLocationToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-all flex items-center gap-1.5" title="定位我當前的 GPS 位置">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+                <span>定位我</span>
+            </button>
+
+            <!-- TDX Real-time API Settings Button -->
+            <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源設定">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>設定</span>
+            </button>
+
+            <!-- Shape Legend Button -->
+            <button id="btnLegendToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-500/10 hover:bg-gray-500/20 transition-all flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>圖例</span>
+            </button>
+
+            <!-- Line Filter Toggle Button -->
+            <button id="btnFilterToggle" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-500/10 hover:bg-gray-500/20 transition-all flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span>路線篩選</span>
+            </button>
+
+            <!-- Reset View Button -->
+            <button id="btnResetView" class="p-2 rounded-xl text-xs bg-gray-500/10 hover:bg-gray-500/20 transition-all" title="重設地圖視角">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+
+            <!-- Direct Day / Dark Mode Toggle Button (純手動切換) -->
+            <button id="btnThemeToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all flex items-center gap-1.5" title="切換日間 / 夜間地圖模式">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">夜間模式</span>
+            </button>
+
+        </div>
+    </header>
+
+    <!-- Bottom Timeline & Train Speed Controller Bar (Up to 500x) -->
+    <div id="timelineControlBar" class="fixed bottom-3 left-3 right-3 sm:left-6 sm:right-auto z-[1000] pointer-events-auto glass-panel rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row items-center gap-3 border border-gray-500/30 max-w-2xl">
+        
+        <!-- Virtual Time Picker Input & Reset -->
+        <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
+            <div class="flex items-center gap-1.5">
+                <span class="text-xs font-bold text-emerald-400">🕒 自訂時間:</span>
+                <input type="time" id="virtualTimeInput" value="08:00" class="bg-gray-900 border border-gray-700 text-xs font-mono px-2 py-1 rounded-lg text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            <button id="btnRealtimeReset" class="text-[11px] font-medium bg-gray-500/20 hover:bg-gray-500/30 px-2 py-1 rounded-lg text-gray-300 transition-all" title="重設為當前真實時間">同步即時</button>
+        </div>
+
+        <!-- Timeline Slider -->
+        <div class="flex-1 w-full flex items-center gap-2">
+            <span class="text-[10px] font-mono opacity-60">00:00</span>
+            <input type="range" id="timelineSlider" min="0" max="1439" value="480" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <span class="text-[10px] font-mono opacity-60">23:59</span>
+        </div>
+
+        <!-- Train Speed Multiplier Buttons (1x, 5x, 10x, 50x, 100x, 500x) -->
+        <div class="flex items-center gap-1 shrink-0 flex-wrap">
+            <span class="text-[11px] font-bold opacity-75 mr-1">倍速:</span>
+            <button data-speed="1" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-emerald-500 text-white font-bold transition-all">1x</button>
+            <button data-speed="5" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">5x</button>
+            <button data-speed="10" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">10x</button>
+            <button data-speed="50" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">50x</button>
+            <button data-speed="100" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">100x</button>
+            <button data-speed="500" class="speed-btn px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition-all">500x</button>
+        </div>
+
+    </div>
+
+    <!-- Route Planner Panel Dialog (Origin-Destination Route Finder) -->
+    <div id="routePlannerModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-gray-500/20 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold">捷運站對站路徑規劃 (Route Planner)</h2>
+                        <p class="text-xs opacity-75">計算最佳搭乘時間、乘車站數與動態導引畫線</p>
+                    </div>
+                </div>
+                <button id="btnCloseRoutePlannerModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
+            </div>
+
+            <!-- Route Selection Form -->
+            <div class="space-y-3.5 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-emerald-400 mb-1">🟢 選擇起點車站 (Origin Station)</label>
+                    <select id="routeStartSelect" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-emerald-500 focus:outline-none">
+                        <!-- Programmatically populated -->
+                    </select>
+                </div>
+                <div class="flex items-center justify-center">
+                    <button id="btnSwapRouteStations" class="p-1.5 rounded-full bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 transition-all" title="對調起終點站">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L13 16"/></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-rose-400 mb-1">🔴 選擇終點車站 (Destination Station)</label>
+                    <select id="routeEndSelect" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-rose-500 focus:outline-none">
+                        <!-- Programmatically populated -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Route Search Result Card -->
+            <div id="routeResultCard" class="hidden bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 mb-4 space-y-2 text-xs">
+                <div class="font-bold text-emerald-300 text-sm flex items-center justify-between">
+                    <span>搭乘建議方案</span>
+                    <span id="routeEstTime" class="font-mono text-xs bg-emerald-500/20 px-2 py-0.5 rounded border border-emerald-400/40">預估約 -- 分鐘</span>
+                </div>
+                <div class="text-gray-300 space-y-1">
+                    <div>總乘車站數：<span id="routeStationCount" class="font-bold text-white">-- 站</span></div>
+                    <div>轉乘指引：<span id="routeTransfers" class="font-bold text-amber-300">直達無需轉乘</span></div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex items-center justify-between pt-3 border-t border-gray-500/20">
+                <button id="btnClearRouteHighlight" class="px-3 py-2 rounded-xl bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 text-xs font-medium transition-all hidden">清除路徑高亮</button>
+                <button id="btnExecuteRouteSearch" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg ml-auto">搜尋建議路線與高亮畫線</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TDX Real-time API Settings Modal Dialog -->
+    <div id="settingsModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-lg shadow-2xl relative border border-gray-500/30">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-gray-500/20 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold">系統數據源設定 (Data Source Settings)</h2>
+                        <p class="text-xs opacity-75">切換模擬運行或串接交通部 TDX 平台 OAuth API</p>
+                    </div>
+                </div>
+                <button id="btnCloseSettingsModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
+            </div>
+
+            <!-- Radio Select Data Source Mode -->
+            <div class="space-y-3 mb-5">
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-500/10 border border-gray-500/20 cursor-pointer hover:bg-gray-500/15 transition-all">
+                    <input type="radio" name="dataSourceMode" value="mock" id="modeMock" checked class="mt-1 text-purple-500 focus:ring-0">
+                    <div>
+                        <div class="font-bold text-sm flex items-center gap-2">
+                            <span>模擬動態模式 (Mock Mode)</span>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/30">營運 06:00~24:00</span>
+                        </div>
+                        <p class="text-xs opacity-75 mt-0.5">預設開啟，高禎率動畫沿軌道平滑行駛，支援直達車跳站與站點 3.5 秒停靠載客。</p>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-500/10 border border-gray-500/20 cursor-pointer hover:bg-gray-500/15 transition-all">
+                    <input type="radio" name="dataSourceMode" value="tdx" id="modeTdx" class="mt-1 text-purple-500 focus:ring-0">
+                    <div>
+                        <div class="font-bold text-sm flex items-center gap-2">
+                            <span>真實 TDX API 數據模式 (TDX Real-time Mode)</span>
+                            <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30">OAuth 2.0</span>
+                        </div>
+                        <p class="text-xs opacity-75 mt-0.5">輸入交通部 TDX 平台 Client ID & Secret，透過 OAuth2 即時輪詢 TRTC / TYMC API。</p>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Credentials Form (TDX API Mode Only) -->
+            <div id="tdxCredentialsBlock" class="space-y-3 bg-purple-950/30 border border-purple-500/20 rounded-2xl p-4 mb-5 hidden">
+                <div class="text-xs font-bold text-purple-300 flex items-center justify-between">
+                    <span>TDX API 金鑰設定</span>
+                    <a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" class="text-[11px] text-blue-400 hover:underline">免費申請 ID ➔</a>
+                </div>
+                <div>
+                    <label class="block text-[11px] opacity-75 mb-1">Client ID</label>
+                    <input type="text" id="tdxClientId" placeholder="例如：YourClientID-xxxx-xxxx" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] opacity-75 mb-1">Client Secret</label>
+                    <input type="password" id="tdxClientSecret" placeholder="例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div id="tdxAuthStatus" class="text-[11px] font-mono opacity-80 pt-1 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-gray-500"></span>
+                    <span>狀態：尚未驗證認證金鑰</span>
+                </div>
+            </div>
+
+            <!-- Modal Footer Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-500/20">
+                <button id="btnSaveSettings" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg">儲存並重新加載 (Purge & Refresh)</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Line Filter Control Panel Overlay -->
+    <div id="filterPanel" class="fixed top-20 left-3 z-[999] pointer-events-auto glass-panel rounded-2xl p-4 w-[310px] max-w-[calc(100vw-24px)] shadow-2xl transition-all duration-300 transform -translate-x-[350px] opacity-0">
+        <div class="flex items-center justify-between mb-3 border-b border-gray-500/20 pb-2">
+            <h2 class="text-sm font-bold flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                捷運路線顯示控制
+            </h2>
+            <button id="btnCloseFilter" class="opacity-75 hover:opacity-100 p-1">✕</button>
+        </div>
+        <div class="grid grid-cols-1 gap-2" id="lineFilterContainer">
+            <!-- Programmatically populated -->
+        </div>
+    </div>
+
+    <!-- Shape Legend Modal Dialog -->
+    <div id="legendModal" class="fixed inset-0 z-[2000] modal-backdrop flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="glass-panel rounded-3xl p-5 sm:p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl relative border border-gray-500/30">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-gray-500/20 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold">Mini Metro 車站幾何圖形圖例說明</h2>
+                        <p class="text-xs opacity-75">包含台北捷運與桃園機場捷運之車站幾何視覺標誌</p>
+                    </div>
+                </div>
+                <button id="btnCloseLegendModal" class="w-8 h-8 rounded-full bg-gray-500/10 hover:bg-gray-500/20 flex items-center justify-center opacity-75 hover:opacity-100 transition-all">✕</button>
+            </div>
+
+            <!-- Shape Grid List -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6" id="legendModalShapeGrid">
+                <!-- Programmatically populated -->
+            </div>
+
+            <!-- Express Train & Dwell Rules Legend Banner -->
+            <div class="bg-purple-950/40 border border-purple-500/30 rounded-2xl p-4 mb-5 flex items-start gap-3">
+                <div class="w-10 h-8 rounded-xl bg-purple-900 border border-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg width="28" height="12" viewBox="0 0 32 13" fill="none">
+                        <path d="M2,6.5 C2,3.5 5,1 10,1 L26,1 C29,1 31,3.5 31,6.5 C31,9.5 29,12 26,12 L10,12 C5,12 2,9.5 2,6.5 Z" fill="#84005C" stroke="#FFD100" stroke-width="1.5"/>
+                        <path d="M12,4 L24,4 A2,2 0 0,1 26,6 L26,7 A2,2 0 0,1 24,9 L12,9 Z" fill="#ffffff" opacity="0.9"/>
+                        <circle cx="28" cy="6.5" r="1.5" fill="#FFD100"/>
+                    </svg>
+                </div>
+                <div class="space-y-1">
+                    <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <span>機捷紫色直達車 (A01台北車站 ↔ A13機場第二航廈)</span>
+                        <span class="text-[10px] bg-purple-500/20 border border-purple-400/40 px-1 py-0.2 rounded text-purple-300">紫色流線車頭</span>
+                    </div>
+                    <p class="text-[11px] opacity-90 leading-relaxed">
+                        • <strong>迴轉區間</strong>：紫色直達特快車於 A01台北車站與 A13機場第二航廈之間定點停靠折返。<br>
+                        • <strong>跳站規則</strong>：僅停靠 A1台北車站、A3新北產業園區、A8長庚醫院、A12第一航廈、A13第二航廈。中途站不停靠高速通過。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Reference Links & Credits Footer -->
+            <div class="border-t border-gray-500/20 pt-4 text-xs opacity-75 space-y-2">
+                <div class="font-bold flex items-center gap-1.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    設計靈感與參考來源：
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-2">
+                    <a href="https://dinopoloclub.com/games/mini-metro/" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline flex items-center gap-1">
+                        <span>🎮 Dinosaur Polo Club《Mini Metro》官方網頁</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                    <a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:underline flex items-center gap-1">
+                        <span>🗺️ 交通部 TDX 運輸資料流通服務</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Bottom Station / Train Info Drawer -->
+    <div id="infoDrawer" class="fixed bottom-16 sm:bottom-16 left-3 right-3 sm:left-auto sm:right-4 sm:w-[420px] z-[1000] pointer-events-auto glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-96 opacity-0">
+        <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2.5">
+                <div id="drawerIcon" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"></div>
+                <div>
+                    <h3 id="drawerTitle" class="font-bold text-base leading-tight">車站名稱</h3>
+                    <p id="drawerSubtitle" class="text-xs opacity-75 font-mono mt-0.5">資訊載入中...</p>
+                </div>
+            </div>
+            <button id="btnCloseDrawer" class="opacity-75 hover:opacity-100 p-1">✕</button>
+        </div>
+        <div id="drawerBody" class="mt-3 text-xs space-y-2.5 border-t border-gray-500/20 pt-2.5">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+
+    <!-- Leaflet.js Mapping Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Project Modular JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/tdxApi.js"></script>
+    <script src="js/routePlanner.js"></script>
+    <script src="js/timelineController.js"></script>
+    <script src="js/debugLogger.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
