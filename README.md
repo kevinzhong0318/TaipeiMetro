@@ -1,6 +1,6 @@
-# 大台北捷運 & 機場捷運 即時動態地圖 | Greater Taipei & Taoyuan Airport MRT Live Map (Mini Metro Style)
+# 大台北捷運 & 機場捷運 即時動態地圖 | Greater Taipei & Taoyuan Airport MRT Live Map
 
-> 一個結合「真實地理地圖 (Leaflet.js + CartoDB)」、「交通部 TDX API OAuth 2.0 即時串接」、「API 數據異常自動檢測與動態模擬備援機制 (Anomaly Fallback)」、「淡水信義線 (R Line) 列車即時 Console 除錯日誌器 (`TamsuiXinyiDebugLogger`)」，以及極簡「《Mini Metro》幾何美學」的大台北捷運與桃園機場捷運即時 Web 專案。
+> 結合真實地理地圖 (Leaflet.js + CartoDB)、交通部 TDX API OAuth 2.0 即時串接、**Mock 與 TDX 完全解耦雙軌架構**、車輛編號追蹤與定位校正、路線營運狀態看板、以及極簡《Mini Metro》幾何美學的大台北捷運與桃園機場捷運即時 Web 專案。
 
 ![License](https://img.shields.io/badge/License-MIT-emerald.svg)
 ![Leaflet](https://img.shields.io/badge/Leaflet-v1.9.4-blue.svg)
@@ -11,110 +11,197 @@
 
 ## 📖 專案簡介 (Project Overview)
 
-本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，並採用**高維度多檔案模組化架構 (Multi-file Architecture)** 拆分。將台北捷運 (Taipei Metro TRTC) 各主線、**中和新蘆線 (含迴龍線與蘆洲線分支 `O_Luzhou`)**、支線、**官方最新三鶯線 (San-Ying Line LB01~LB12)** 以及 **桃園機場捷運 (Taoyuan Airport MRT)** 精確繪製於開源地圖上。
+本專案使用前端原生技術（HTML5, Tailwind CSS CDN, Leaflet.js, Vanilla JS）打造，採用**完全解耦 (Fully Decoupled)** 的雙軌資料架構設計，將模擬數據服務 (`MockDataService`) 與 TDX API 服務 (`TdxApiService`) 徹底分離為兩個獨立模組，確保切換模式時不會發生資料混亂或殘留。
 
-本系統具備「**淡水信義線 (R Line) DevTools/終端機列車即時 Console 除錯日誌器**」、「**交通部 TDX OAuth 2.0 API 串接**」、「**API 數據異常偵測與列車預估行駛動畫無縫接管 (列車永不卡死/消失)**」、「**純手動 ☀️日間 ↔ 🌙夜間 地圖底圖切換**」、「**桃園機捷直達特快車經典紫色塗裝 (`#84005C`) 於 A13 迴轉**」、「**最高 500 倍超極速播放控制 (`1x`, `5x`, `10x`, `50x`, `100x`, `500x`)**」、「**模擬列車營運時間規範為 06:00 ~ 24:00**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
+涵蓋路線：
+- 台北捷運 (TRTC)：文湖線、淡水信義線、松山新店線、中和新蘆線 (含蘆洲支線)、板南線、環狀線
+- 支線：新北投支線、小碧潭支線
+- 桃園機場捷運 (TYMC)：**普通車 (每站停靠)** 與 **紫色直達特快車 (跳站停靠)**
+- 輕軌：淡海輕軌 (綠山線/藍海線)、安坑輕軌
+- 三鶯線 (建設中，12 站)
 
 ---
 
-## 📂 多檔案目錄結構 (Project Directory Structure)
+## 📂 多檔案目錄結構 (Project Architecture)
 
 ```
 metro/
-├── index.html            # 主頁面結構與 CDN 引入 (Tailwind CSS, Leaflet.js)
-├── main.html             # Mirror 備用首頁
+├── index.html                     # 主入口（含路線狀態看板 UI）
 ├── css/
-│   └── style.css         # 主題變數 (Light/Dark High-contrast)、Glassmorphism 面板與 Timeline 樣式
+│   └── style.css                  # 主題變數、Glassmorphism、異常外框、狀態看板樣式
 ├── js/
-│   ├── config.js         # 路線數據（機捷特快車紫色 #84005C、橘線蘆洲支線 O_Luzhou）、車站座標、機捷 A13 迴轉、三鶯線 12 站 (MrtDataService)
-│   ├── map.js            # Leaflet 地圖、CARTO 底圖 (☀️日間 Voyager / 🌙夜間 Dark Matter 切換)、Zoom 14 站名與 GPS (MapController)
-│   ├── tdxApi.js         # TDX OAuth 2.0 認證、LiveBoard 輪詢與 API 數據異常檢測/備援判定 (TDXService)
-│   ├── routePlanner.js   # 站對站 BFS 搜尋、轉乘分析、高亮軌道線與平滑沿線移動導引動畫 (RoutePlanner)
-│   ├── timelineController.js # 時間軸 Slider / Time Input 與 500x 倍速控制器 (TimelineController)
-│   ├── debugLogger.js    # 淡水信義線 (R Line) 列車即時 Console 除錯日誌器 (TamsuiXinyiDebugLogger)
-│   └── app.js            # 紫色直達車動畫 06:00~24:00 發車循環、API 異常自動接管備援 (AnimationEngine) 與 UIController (UIController)
-└── README.md             # 專案完整說明與 Git 工作流指引
+│   ├── config.js                  # 路線/車站/形狀靜態數據 (MrtDataService)
+│   ├── map.js                     # Leaflet 地圖控制器 (MapController)
+│   ├── services/
+│   │   ├── MockDataService.js     # 獨立模擬數據服務（列車生成/跳站/動畫/發車時段）
+│   │   └── TdxApiService.js       # 獨立 TDX API 服務（OAuth/LiveBoard/Alert/定位校正）
+│   ├── routePlanner.js            # BFS 站對站路徑規劃 (RoutePlanner)
+│   ├── timelineController.js      # 時間軸 Slider / 500x 倍速控制器 (TimelineController)
+│   ├── uiController.js            # 介面控制器 (UIController) — Modal/Drawer/狀態看板
+│   ├── debugLogger.js             # 淡水信義線 R Line 即時除錯日誌 (TamsuiXinyiDebugLogger)
+│   └── app.js                     # AnimationEngine 渲染引擎 + 應用程式入口
+└── README.md                      # 本說明文件
 ```
 
 ---
 
-## ✨ 核心功能與亮點 (Key Features & Highlights)
+## 🔑 核心架構設計 (Architecture Design)
 
-### 1. 🖥️ 淡水信義線 (R Line) 終端機即時除錯輸出 (`js/debugLogger.js`)
-- **專屬監控機制 (`TamsuiXinyiDebugLogger`)**：開啟瀏覽器 DevTools (F12 ➔ Console) 即每 5 秒自動印出最新列車狀態快照。
-- **格式化 Console 表格**：
-  - **列車 ID**：`TR-R-101`
-  - **行駛方向**：`往 淡水 (R28)` / `往 象山 (R02)`
-  - **當前位置與動態**：`停靠於 [R10 台北車站]` / `前往 [R11 中山] (進度: 45%)`
-  - **資料狀態與時間**：`10:00:05 | TDX API 實時數據` 或 `演算法預估推算中`
+### Mock 與 TDX 完全解耦
 
-### 2. 🌐 交通部 TDX API 完整串接與 OAuth 2.0 驗證
-- **OAuth 2.0 認證**：支援在前端設定 Modal 輸入 Client ID 與 Client Secret，發送 POST 請求至 TDX 驗證伺服器取得 Bearer Access Token。
-- **LiveBoard API**：即時輪詢 TRTC (台北捷運) 與 TYMC (桃園機捷) 之 `/Rail/Metro/LiveBoard` 資料。
+```
+┌──────────────────┐    switchMode('mock')    ┌──────────────────────┐
+│  AnimationEngine │ ◄───────────────────────► │  MockDataService     │
+│  (純渲染引擎)     │                           │  · init()            │
+│                  │    switchMode('tdx')      │  · update(delta,spd) │
+│  · animate()     │ ◄───────────────────────► │  · getTrains()       │
+│  · _syncMarkers()│                           │  · cleanup()         │
+│  · _createMarker │                           └──────────────────────┘
+└──────────────────┘                           ┌──────────────────────┐
+                                               │  TdxApiService       │
+                                               │  · init()            │
+                                               │  · getTrains()       │
+                                               │  · getLineAlerts()   │
+                                               │  · cleanup()         │
+                                               └──────────────────────┘
+```
 
-### 3. 🛡️ API 資料異常判定與動態模擬無縫接管 (Anomaly Detection & Fallback)
-- **異常判定機制**：
-  - 網路連線失敗或 HTTP 非 200 回應。
-  - API 回傳陣列為空值。
-  - 必要數據欄位缺失（如 `LineID`、`StationID`）。
-  - 連續 3 次輪詢資料時間戳與列車位置停滯不前 (Stagnant Data)。
-- **動態備援接管**：
-  - 當檢測到 API 異常時，系統**絕不讓畫面上的列車卡死或消失**；而是自動切換至動態預估模擬模式 (`AnimationEngine`)，依據系統時間與預設班表順暢推算列車位置並補全動畫。
-- **視覺警示標籤**：
-  - 狀態列提示：`<span class="text-rose-300">⚠️ 部分路線 API 數據異常，已啟動預估動態模擬</span>`。
+- **禁止降級/混合備援**：切換模式時，`AnimationEngine.switchMode()` 會完全銷毀 (`cleanup()`) 當前 Service 的所有列車、定時器與狀態，再初始化另一邊
+- **統一介面**：兩個 Service 均實現 `init()`, `update()`, `getTrains()`, `cleanup()`, `getLineAlerts()` 等方法
+- **零共用程式碼**：兩個 Service 檔案之間無任何 import 或引用
 
 ---
 
-## 🌿 Standard Git Branching Workflow 指引
+## ✨ 核心功能與亮點
 
-在開發新功能分支（例如 `feature/tamsui-xinyi-debug-logger`）時，請遵循以下 Git 操作流程：
+### 1. 🏷️ 車輛編號與實時定位校正
+
+- **車號顯示**：每輛列車的 Tooltip 與 Drawer 均顯示車輛編號
+  - Mock 模式：`MOCK-BR-001`、`MOCK-EX-025` (直達車)
+  - TDX 模式：從 API 回傳的 `TrainNo`/`CarNo` 欄位解析
+- **定位異常偵測**：TDX 模式下自動偵測列車位置停滯
+  - 連續 2 次輪詢未更新 → Console 印出 `[Warn] Train #xxx 定位異常/偏移`
+  - 連續 4 次以上 → 紅色外框 (`train-anomaly-error`)
+  - 2~3 次 → 黃色外框 (`train-anomaly-warn`)
+
+### 2. 🚄 桃園機場捷運特快車精確區分
+
+| 車種 | 停靠站 | 視覺樣式 |
+|------|--------|----------|
+| 直達特快車 | A1 台北車站、A3 新北產業園區、A8 長庚醫院、A12 第一航廈、A13 第二航廈 | 紫色流線車廂 (`#84005C`) + 金色邊框 + 「直達」標籤 |
+| 普通車 | A1~A22 全線每站停靠 | 紫色標準藥丸車廂 |
+
+### 3. 📊 路線營運狀態看板
+
+- 介面頂部可展開的「路線狀態看板」，顯示所有路線當前營運狀況
+- TDX 模式下自動呼叫 Alert API 取得即時異常資訊
+- 狀態標籤：🟢 正常營運 / 🟡 局部限速 / 🔴 延誤中
+- 可點擊查看 Alert 詳細訊息
+
+### 4. 🌐 TDX API OAuth 2.0 完整串接
+
+- 前端 Settings Modal 設定 Client ID / Secret（儲存至 `localStorage`，不寫入原始碼）
+- 60 秒間隔自動輪詢 TRTC + TYMC LiveBoard API
+- 數據異常偵測（空資料、欄位缺失、數據停滯）
+
+### 5. 🖥️ 淡水信義線 Console 即時除錯
+
+- 每 5 秒自動印出 R Line 列車狀態 `console.table`
+- 網頁右下角 HUD 面板即時顯示
+
+### 6. 🎮 模擬模式功能
+
+- 06:00~24:00 營運時段自動發車/收班
+- 時間軸 Slider 自由拖曳
+- 1x / 5x / 10x / 50x / 100x / 500x 倍速控制
+- 直達車跳站 + 每站 3.5 秒停靠
+
+### 7. 🗺️ 站對站路徑規劃
+
+- BFS 最短路徑演算法
+- 轉乘分析與預估時間
+- 地圖高亮路徑 + 脈衝光點導引動畫
+
+### 8. 🌗 日間/夜間地圖切換
+
+- 手動切換 ☀️ 日間 (CARTO Voyager) / 🌙 夜間 (CARTO Dark Matter) 底圖
+- UI 面板同步主題切換
+
+---
+
+## 🌿 Git 分支開發工作流 (Standard Git Branching Workflow)
+
+### 功能分支開發
 
 ```bash
-# 1. 切換至 main 主線分支並拉取最新遠端程式碼
+# 1. 確保在最新的 main 分支上
 git checkout main
 git pull origin main
 
 # 2. 建立並切換至新功能開發分支
-git checkout -b feature/tamsui-xinyi-debug-logger
+git checkout -b feature/your-feature-name
 
-# 3. 進行程式碼開發與測試，確認無誤後提交 Commit
+# 3. 進行開發、測試，確認無誤後提交
 git status
 git add .
-git commit -m "feat: add Tamsui-Xinyi Line (R-Line) live console debug logger module"
+git commit -m "feat: describe your changes"
 
-# 4. 推送功能分支至 GitHub 遠端
-git push -u origin feature/tamsui-xinyi-debug-logger
+# 4. 推送功能分支至遠端
+git push -u origin feature/your-feature-name
 
-# 5. 切換回 main 主線分支並進行安全合併 (Merge)
+# 5. 在 GitHub 上建立 Pull Request 進行 Code Review
+# 或直接在本地合併：
 git checkout main
-git merge --no-ff feature/tamsui-xinyi-debug-logger -m "merge: feature/tamsui-xinyi-debug-logger into main"
+git merge --no-ff feature/your-feature-name -m "merge: feature/your-feature-name into main"
 
-# 6. 將最新 main 主線分支推送至 GitHub 遠端
+# 6. 推送合併後的 main
 git push origin main
 
 # 7. (選用) 刪除已合併的功能分支
-git branch -d feature/tamsui-xinyi-debug-logger
-git push origin --delete feature/tamsui-xinyi-debug-logger
+git branch -d feature/your-feature-name
+git push origin --delete feature/your-feature-name
 ```
+
+### 分支命名規範
+
+| 前綴 | 用途 | 範例 |
+|------|------|------|
+| `feature/` | 新功能開發 | `feature/line-status-panel` |
+| `fix/` | Bug 修復 | `fix/train-marker-cleanup` |
+| `refactor/` | 程式碼重構 | `refactor/decouple-mock-tdx` |
+| `docs/` | 文件更新 | `docs/update-readme` |
 
 ---
 
-## 🚀 本地執行與 GitHub Pages 發布 (Run & Deploy)
+## 🚀 本地執行 (Run Locally)
 
-### 本地執行
-1. 直接雙擊開啟 `index.html`，即可在 Chrome / Safari / Edge 瀏覽器中運行。
-2. 開啟瀏覽器 DevTools (按 F12 鍵或 `Cmd+Option+I`)，切換至 **Console** 頁籤觀看淡水信義線即時列車資訊表格。
-3. 或啟動 Python 本地伺服器：
-   ```bash
-   python3 -m http.server 8000
-   ```
-   瀏覽 `http://localhost:8000`
+### 方法一：直接開啟
+直接在瀏覽器中開啟 `index.html`
 
-### GitHub Pages 免費靜態發布
-1. 專案已內建 GitHub Actions 工作流：`.github/workflows/deploy-pages.yml`，每次推送 `main` 會自動部署。
-2. 首次啟用時，前往 Repository 頁面 -> **Settings** -> **Pages**。
-3. 在 **Source** 選擇 **GitHub Actions**。
-4. 推送至 `main` 後，等待 Actions workflow 完成即可取得 GitHub Pages 網址。
+### 方法二：本地伺服器
+```bash
+# Python
+python3 -m http.server 8000
+
+# Node.js (http-server)
+npx http-server . -p 8000
+
+# 瀏覽 http://localhost:8000
+```
+
+### 方法三：VS Code Live Server
+安裝 Live Server 擴充套件，右鍵 `index.html` → Open with Live Server
+
+---
+
+## 🔧 TDX API 設定
+
+1. 前往 [TDX 運輸資料流通服務](https://tdx.transportdata.tw/) 免費申請帳號
+2. 取得 Client ID 與 Client Secret
+3. 開啟地圖 → 點擊「⚙️ 設定」按鈕
+4. 選擇「TDX Real-time Mode」
+5. 輸入 Client ID 與 Secret
+6. 點擊「儲存並重新加載」
 
 ---
 

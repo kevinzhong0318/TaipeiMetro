@@ -217,3 +217,70 @@ input[type=range] {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
+
+/* ═══════════════════════════════════════════════
+   定位異常列車警告外框 (Anomaly Warning Outlines)
+   ═══════════════════════════════════════════════ */
+.train-anomaly-warn .train-pill {
+    border-color: #FBBF24 !important;
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.6), 0 0 12px rgba(251, 191, 36, 0.3);
+}
+.train-anomaly-warn .express-bullet-train svg path:first-child {
+    stroke: #FBBF24 !important;
+    stroke-width: 2.5;
+}
+
+.train-anomaly-error .train-pill {
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.7), 0 0 14px rgba(239, 68, 68, 0.4);
+    animation: anomaly-pulse 0.8s infinite ease-in-out;
+}
+.train-anomaly-error .express-bullet-train svg path:first-child {
+    stroke: #EF4444 !important;
+    stroke-width: 2.5;
+}
+
+@keyframes anomaly-pulse {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(1.3); }
+    100% { filter: brightness(1); }
+}
+
+/* ═══════════════════════════════════════════════
+   路線營運狀態看板 (Line Status Panel)
+   ═══════════════════════════════════════════════ */
+.line-status-item {
+    transition: background-color 0.2s ease;
+}
+
+.line-status-item:hover {
+    background: rgba(107, 114, 128, 0.12);
+}
+
+.line-status-alert {
+    animation: dwell-pulse 1.2s infinite ease-in-out;
+}
+
+.line-status-detail {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════
+   列車 Tooltip 車輛編號 (Train Tooltip)
+   ═══════════════════════════════════════════════ */
+.train-tooltip {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 10px !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #f3f4f6 !important;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
+
+.train-tooltip::before {
+    border-top-color: rgba(15, 23, 42, 0.92) !important;
+}

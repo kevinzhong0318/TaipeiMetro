@@ -101,6 +101,12 @@
                 <span>定位我</span>
             </button>
 
+            <!-- Line Status Toggle Button -->
+            <button id="btnLineStatusToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-all flex items-center gap-1.5" title="路線營運狀態看板">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span>路線狀態</span>
+            </button>
+
             <!-- TDX Real-time API Settings Button -->
             <button id="btnSettingsToggle" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition-all flex items-center gap-1.5" title="TDX Real-time API 資料源設定">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -132,6 +138,20 @@
 
         </div>
     </header>
+
+    <!-- Line Status Panel (Collapsible) -->
+    <div id="lineStatusPanel" class="fixed top-[72px] sm:top-[56px] left-3 right-3 sm:left-auto sm:right-3 sm:w-[360px] z-[999] glass-panel rounded-2xl p-3 shadow-2xl hidden pointer-events-auto border border-gray-500/30">
+        <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-500/20">
+            <h2 class="text-sm font-bold flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                路線營運狀態看板
+            </h2>
+            <span class="text-[10px] font-mono opacity-60">自動更新</span>
+        </div>
+        <div id="lineStatusContent" class="space-y-1 max-h-[60vh] overflow-y-auto">
+            <!-- Programmatically populated by UIController -->
+        </div>
+    </div>
 
     <!-- Bottom Timeline & Train Speed Controller Bar (Up to 500x) -->
     <div id="timelineControlBar" class="fixed bottom-3 left-3 right-3 sm:left-6 sm:right-auto z-[1000] pointer-events-auto glass-panel rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row items-center gap-3 border border-gray-500/30 max-w-2xl">
@@ -267,29 +287,9 @@
                             <span>真實 TDX API 數據模式 (TDX Real-time Mode)</span>
                             <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30">OAuth 2.0</span>
                         </div>
-                        <p class="text-xs opacity-75 mt-0.5">輸入交通部 TDX 平台 Client ID & Secret，透過 OAuth2 即時輪詢 TRTC / TYMC API。</p>
+                        <p class="text-xs opacity-75 mt-0.5">預設已自動配置官方授權 Token，透過 OAuth 2.0 即時輪詢 TRTC / TYMC LiveBoard 實時數據。</p>
                     </div>
                 </label>
-            </div>
-
-            <!-- Credentials Form (TDX API Mode Only) -->
-            <div id="tdxCredentialsBlock" class="space-y-3 bg-purple-950/30 border border-purple-500/20 rounded-2xl p-4 mb-5">
-                <div class="text-xs font-bold text-purple-300 flex items-center justify-between">
-                    <span>TDX API 金鑰設定</span>
-                    <a href="https://tdx.transportdata.tw/" target="_blank" rel="noopener noreferrer" class="text-[11px] text-blue-400 hover:underline">免費申請 ID ➔</a>
-                </div>
-                <div>
-                    <label class="block text-[11px] opacity-75 mb-1">Client ID</label>
-                    <input type="text" id="tdxClientId" placeholder="例如：YourClientID-xxxx-xxxx" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white opacity-75 cursor-not-allowed focus:outline-none" readonly>
-                </div>
-                <div>
-                    <label class="block text-[11px] opacity-75 mb-1">Client Secret</label>
-                    <input type="password" id="tdxClientSecret" placeholder="••••••••••••••••••••••••••••" class="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-700 text-xs font-mono text-white opacity-75 cursor-not-allowed focus:outline-none" readonly>
-                </div>
-                <div id="tdxAuthStatus" class="text-[11px] font-mono opacity-80 pt-1 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-gray-500"></span>
-                    <span>狀態：尚未驗證認證金鑰</span>
-                </div>
             </div>
 
             <!-- Modal Footer Buttons -->
@@ -399,12 +399,14 @@
     <!-- Leaflet.js Mapping Library -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Project Modular JavaScript Files -->
+    <!-- Project Modular JavaScript Files (Decoupled Architecture) -->
     <script src="js/config.js"></script>
     <script src="js/map.js"></script>
-    <script src="js/tdxApi.js"></script>
+    <script src="js/services/MockDataService.js"></script>
+    <script src="js/services/TdxApiService.js"></script>
     <script src="js/routePlanner.js"></script>
     <script src="js/timelineController.js"></script>
+    <script src="js/uiController.js"></script>
     <script src="js/debugLogger.js"></script>
     <script src="js/app.js"></script>
     <!-- Train Stats Modal -->

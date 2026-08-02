@@ -86,11 +86,12 @@ const TamsuiXinyiDebugLogger = (function () {
             ? MrtDataService.stations[code].name : code;
     }
     function dataLabel() {
-        if (!window.TDXService) return '模擬';
-        const m = TDXService.getMode();
+        if (!window.AnimationEngine) return '模擬';
+        const m = AnimationEngine.getMode();
         if (m !== 'tdx') return '🟡 模擬推算';
-        const a = TDXService.getAnomalyStatus();
-        return a.isAnomaly ? '⚠️ API 異常/模擬' : '🟢 TDX 實時';
+        if (!window.TdxApiService) return '🟡 模擬推算';
+        const s = TdxApiService.getConnectionStatus();
+        return s.ok ? '🟢 TDX 實時' : '⚠️ API 異常/模擬';
     }
 
     /* ---------- HUD ---------- */

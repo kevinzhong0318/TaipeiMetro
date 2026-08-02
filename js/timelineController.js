@@ -5,7 +5,7 @@
  */
 const TimelineController = (function() {
     let tickIntervalId = null;
-    let mode = 'tdx'; // 'tdx' or 'mock'
+    let mode = 'mock'; // 'mock' or 'tdx'
     let isCustomMode = false;
     let virtualMinuteOfDay = 480;
     let speedMultiplier = 1;
