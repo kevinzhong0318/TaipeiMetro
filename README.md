@@ -111,14 +111,10 @@ git push origin --delete feature/tamsui-xinyi-debug-logger
    瀏覽 `http://localhost:8000`
 
 ### GitHub Pages 免費靜態發布
-1. 推送至 GitHub：
-   ```bash
-   git add .
-   git commit -m "feat: release Tamsui-Xinyi Line Console Debug Logger & TDX API SPA"
-   git push origin main
-   ```
-2. 前往 Repository 頁面 -> **Settings** -> **Pages**。
-3. 在 **Branch** 選項中選擇 `main` 並按 **Save**。
+1. 專案已內建 GitHub Actions 工作流：`.github/workflows/deploy-pages.yml`，每次推送 `main` 會自動部署。
+2. 首次啟用時，前往 Repository 頁面 -> **Settings** -> **Pages**。
+3. 在 **Source** 選擇 **GitHub Actions**。
+4. 推送至 `main` 後，等待 Actions workflow 完成即可取得 GitHub Pages 網址。
 
 ---
 
