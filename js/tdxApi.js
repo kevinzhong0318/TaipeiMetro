@@ -1,47 +1,39 @@
 /**
  * =========================================================================
- * js/tdxApi.js - 交通部 TDX API OAuth 2.0 認證、即時數據串接與異常自動偵測與備援服務 (TDXService)
- * 包含異常判定演算法：網路斷線/無數據/欄位異常/連續輪詢資料停滯 ➔ 自動觸發 fallback
+ * js/tdxApi.js - 交通部 TDX API OAuth 2.0 認證、即時數據串接與異常偵測 (TDXService)
  * =========================================================================
  */
-const TDXService = (function() {
-    let clientId = localStorage.getItem('tdx_client_id') || '';
-    let clientSecret = localStorage.getItem('tdx_client_secret') || '';
-    let mode = localStorage.getItem('tdx_mode') || 'mock'; // 'mock' | 'tdx'
+const TDXService = (function () {
+    let clientId  = 'M11507108-c58329e5-3f1e-426a';
+    let clientSecret = '4e74f084-927b-4f1e-9a37-4afa29696271';
+    let mode = 'tdx';   // always default to 'tdx'
     let accessToken = '';
     let tokenExpiryTime = 0;
-    
+
     let lastDataHash = '';
     let stagnantCount = 0;
-    let anomalyStatus = {
-        isAnomaly: false,
-        reason: '',
-        lastChecked: null
-    };
+    let anomalyStatus = { isAnomaly: false, reason: '', lastChecked: null };
+    let lastLiveBoardData = null;   // 最近一次有效 LiveBoard 資料快取
 
+    /* ── getters / setters ── */
     function getMode() { return mode; }
     function setMode(m) { mode = m; localStorage.setItem('tdx_mode', m); }
     function getCredentials() { return { clientId, clientSecret }; }
-    function saveCredentials(id, secret) {
-        clientId = id; 
-        clientSecret = secret;
+    function saveCredentials(id, sec) {
+        clientId = id; clientSecret = sec;
         localStorage.setItem('tdx_client_id', id);
-        localStorage.setItem('tdx_client_secret', secret);
+        localStorage.setItem('tdx_client_secret', sec);
     }
+    function getAnomalyStatus() { return anomalyStatus; }
+    function getLastLiveBoardData() { return lastLiveBoardData; }
 
-    /**
-     * 透過 OAuth 2.0 Client Credentials Grant 取得權限 Access Token
-     */
+    /* ── OAuth 2.0 Token ── */
     async function fetchAccessToken() {
         if (!clientId || !clientSecret) {
-            anomalyStatus = { isAnomaly: true, reason: '未設定 Client ID 或 Client Secret', lastChecked: new Date() };
+            anomalyStatus = { isAnomaly: true, reason: '未設定 Client ID / Secret', lastChecked: new Date() };
             return false;
         }
-
-        // 若 Token 仍在有效期內直接使用
-        if (accessToken && Date.now() < tokenExpiryTime - 60000) {
-            return true;
-        }
+        if (accessToken && Date.now() < tokenExpiryTime - 60000) return true;
 
         try {
             const params = new URLSearchParams();
@@ -49,138 +41,96 @@ const TDXService = (function() {
             params.append('client_id', clientId);
             params.append('client_secret', clientSecret);
 
-            const res = await fetch('https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params
-            });
-
+            const res = await fetch(
+                'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token',
+                { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params }
+            );
             if (res.ok) {
-                const data = await res.json();
-                accessToken = data.access_token;
-                tokenExpiryTime = Date.now() + (data.expires_in * 1000);
-                anomalyStatus = { isAnomaly: false, reason: 'TDX API 認證正常', lastChecked: new Date() };
+                const d = await res.json();
+                accessToken = d.access_token;
+                tokenExpiryTime = Date.now() + d.expires_in * 1000;
+                anomalyStatus = { isAnomaly: false, reason: 'OAuth OK', lastChecked: new Date() };
                 return true;
-            } else {
-                const errText = await res.text();
-                anomalyStatus = { isAnomaly: true, reason: `OAuth 認證失敗 (HTTP ${res.status}): ${errText}`, lastChecked: new Date() };
             }
+            anomalyStatus = { isAnomaly: true, reason: `OAuth 失敗 (${res.status})`, lastChecked: new Date() };
         } catch (e) {
-            console.error("TDX OAuth Auth Error:", e);
+            console.error('TDX OAuth Error:', e);
             anomalyStatus = { isAnomaly: true, reason: `認證連線異常: ${e.message}`, lastChecked: new Date() };
         }
         return false;
     }
 
-    /**
-     * 讀取台北捷運 (TRTC) 即時列車與到站資訊 LiveBoard API
-     */
+    /* ── LiveBoard fetchers ── */
     async function fetchLiveBoardTRTC() {
-        if (!accessToken) {
-            const authed = await fetchAccessToken();
-            if (!authed) return null;
-        }
-
+        if (!accessToken) { if (!(await fetchAccessToken())) return null; }
         try {
-            const res = await fetch('https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TRTC?$top=300&$format=JSON', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (res.ok) return await res.json();
-            if (res.status === 401) { // Token 效期逾時自動重試一次
-                await fetchAccessToken();
-            }
-        } catch (e) {
-            console.error("TRTC LiveBoard API Error:", e);
-        }
+            const r = await fetch(
+                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TRTC?$top=300&$format=JSON',
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            if (r.ok) return await r.json();
+            if (r.status === 401) { accessToken = ''; await fetchAccessToken(); }
+        } catch (e) { console.error('TRTC LiveBoard Error:', e); }
         return null;
     }
 
-    /**
-     * 讀取桃園機場捷運 (TYMC) 即時列車 LiveBoard API
-     */
     async function fetchLiveBoardTYMC() {
         if (!accessToken) return null;
         try {
-            const res = await fetch('https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC?$top=100&$format=JSON', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (res.ok) return await res.json();
-        } catch (e) {
-            console.error("TYMC LiveBoard API Error:", e);
-        }
+            const r = await fetch(
+                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC?$top=100&$format=JSON',
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            if (r.ok) return await r.json();
+        } catch (e) { console.error('TYMC LiveBoard Error:', e); }
         return null;
     }
 
-    /**
-     * API 資料異常判定演算法：判定連線、資料空值、欄位缺失與資料停滯不前狀況
-     */
+    /* ── Anomaly detection ── */
     function detectAnomaly(trtcData, tymcData) {
-        if (!trtcData && !tymcData) {
-            return { isAnomaly: true, reason: '⚠️ 無法連線至 TDX API 或伺服器回應異常，已啟動預估動態模擬' };
-        }
+        if (!trtcData && !tymcData)
+            return { isAnomaly: true, reason: '⚠️ 無法連線 TDX API' };
 
-        const combinedData = [...(Array.isArray(trtcData) ? trtcData : []), ...(Array.isArray(tymcData) ? tymcData : [])];
+        const combined = [
+            ...(Array.isArray(trtcData) ? trtcData : []),
+            ...(Array.isArray(tymcData) ? tymcData : [])
+        ];
+        if (combined.length === 0)
+            return { isAnomaly: true, reason: '⚠️ API 回傳空資料' };
 
-        if (combinedData.length === 0) {
-            return { isAnomaly: true, reason: '⚠️ API 回傳數據為空，已啟動預估動態模擬' };
-        }
+        if (!combined.some(i => (i.LineID || i.LineNo) && (i.StationID || i.StationName)))
+            return { isAnomaly: true, reason: '⚠️ 欄位格式異常' };
 
-        // 檢查必要欄位完整性
-        const hasValidFields = combinedData.some(item => (item.LineID || item.LineNo) && (item.StationID || item.StationName));
-        if (!hasValidFields) {
-            return { isAnomaly: true, reason: '⚠️ API 數據欄位格式異常，已啟動預估動態模擬' };
-        }
-
-        // 檢測資料是否停滯不前 (Stagnant Data Detection)
-        const currentHash = combinedData.slice(0, 10).map(i => `${i.LineID}_${i.StationID}_${i.TrainNo || i.TripHeadsign}`).join('|');
-        if (currentHash && currentHash === lastDataHash) {
+        const hash = combined.slice(0, 10).map(i => `${i.LineID}_${i.StationID}_${i.TrainNo || ''}`).join('|');
+        if (hash && hash === lastDataHash) {
             stagnantCount++;
-            if (stagnantCount >= 3) { // 連續 3 次輪詢數據完全停滯
-                return { isAnomaly: true, reason: '⚠️ 列車位置數據停滯不前，已啟動預估動態模擬' };
-            }
-        } else {
-            stagnantCount = 0;
-            lastDataHash = currentHash;
-        }
+            if (stagnantCount >= 3) return { isAnomaly: true, reason: '⚠️ 數據停滯' };
+        } else { stagnantCount = 0; lastDataHash = hash; }
 
-        return { isAnomaly: false, reason: '🟢 TDX API 數據連線正常', data: combinedData };
+        return { isAnomaly: false, reason: '🟢 TDX API 正常', data: combined };
     }
 
-    /**
-     * 綜合輪詢服務：發送請求並經由異常判定機制檢測
-     */
+    /* ── Unified poll ── */
     async function pollLiveTrains() {
-        if (mode !== 'tdx') {
+        if (mode !== 'tdx')
             return { isAnomaly: false, mode: 'mock', reason: '🟡 模擬數據運行中' };
+
+        if (!(await fetchAccessToken()))
+            return { isAnomaly: true, mode: 'fallback', reason: anomalyStatus.reason };
+
+        const [trtc, tymc] = await Promise.all([fetchLiveBoardTRTC(), fetchLiveBoardTYMC()]);
+        const result = detectAnomaly(trtc, tymc);
+
+        if (!result.isAnomaly && result.data) {
+            lastLiveBoardData = result.data;  // 快取有效資料
         }
 
-        const tokenSuccess = await fetchAccessToken();
-        if (!tokenSuccess) {
-            return { isAnomaly: true, mode: 'fallback', reason: anomalyStatus.reason || '⚠️ OAuth 驗證失敗，已啟動預估動態模擬' };
-        }
-
-        const [trtcData, tymcData] = await Promise.all([
-            fetchLiveBoardTRTC(),
-            fetchLiveBoardTYMC()
-        ]);
-
-        const checkResult = detectAnomaly(trtcData, tymcData);
-        return {
-            ...checkResult,
-            mode: checkResult.isAnomaly ? 'fallback' : 'tdx'
-        };
+        return { ...result, mode: result.isAnomaly ? 'fallback' : 'tdx' };
     }
-
-    function getAnomalyStatus() { return anomalyStatus; }
 
     return {
-        getMode,
-        setMode,
-        getCredentials,
-        saveCredentials,
-        fetchAccessToken,
-        pollLiveTrains,
-        detectAnomaly,
-        getAnomalyStatus
+        getMode, setMode, getCredentials, saveCredentials,
+        fetchAccessToken, pollLiveTrains, getAnomalyStatus,
+        getLastLiveBoardData
     };
 })();

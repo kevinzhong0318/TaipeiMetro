@@ -38,7 +38,6 @@ const AnimationEngine = (function() {
 
     function init() {
         cleanup();
-        spawnTrains();
         animFrameId = requestAnimationFrame(animate);
         startApiPolling();
     }
@@ -56,19 +55,137 @@ const AnimationEngine = (function() {
     function startApiPolling() {
         if (apiPollIntervalId) clearInterval(apiPollIntervalId);
 
-        apiPollIntervalId = setInterval(async () => {
+        const doPoll = async () => {
             if (TDXService.getMode() === 'tdx') {
                 const pollResult = await TDXService.pollLiveTrains();
                 updateApiStatusBadge(pollResult);
 
-                // 當檢測到 API 數據異常或斷線時，接管切換至動態預估模擬備援，保證列車不卡死或消失
-                if (pollResult.isAnomaly || pollResult.mode === 'fallback') {
+                if (!pollResult.isAnomaly && pollResult.data) {
+                    if (trainObjects.length === 0 && !isNighttime()) spawnTrains();
+                    applyLiveBoardData(pollResult.data);
+                } else if (pollResult.isAnomaly || pollResult.mode === 'fallback') {
                     if (trainObjects.length === 0 && !isNighttime()) {
                         spawnTrains();
                     }
                 }
+            } else {
+                if (trainObjects.length === 0 && !isNighttime()) spawnTrains();
             }
-        }, 15000); // 每 15 秒輪詢檢查 API 狀態
+        };
+
+        // 立即執行一次
+        doPoll();
+        
+        apiPollIntervalId = setInterval(doPoll, 60000);
+    }
+
+    /**
+     * 將 TDX LiveBoard 資料映射到現有列車物件的位置
+     * LiveBoard 資料欄位：LineID, StationID, DestinationStaionID, TripHeadSign, Direction (0=去程/1=返程)
+     */
+    function applyLiveBoardData(liveBoardArray) {
+        if (!liveBoardArray || !Array.isArray(liveBoardArray)) return;
+
+        // Group API items by LineID
+        const lineMap = {};
+        liveBoardArray.forEach(item => {
+            const lineId = item.LineID || '';
+            if (!lineMap[lineId]) lineMap[lineId] = [];
+            lineMap[lineId].push(item);
+        });
+
+        // 輔助函式：推斷 API 資料的方向
+        const getApiDirection = (item) => {
+            if (item.Direction !== undefined) return item.Direction === 0 ? 1 : -1;
+            const dest = item.DestinationStationID || item.DestinationStaionID || '';
+            const lineId = item.LineID || '';
+            const seq = MrtDataService.sequences[lineId];
+            if (!seq || !dest) return 1;
+            const destIdx = seq.indexOf(dest);
+            const currIdx = seq.indexOf(item.StationID);
+            if (destIdx >= 0 && currIdx >= 0) return destIdx >= currIdx ? 1 : -1;
+            return destIdx >= seq.length / 2 ? 1 : -1;
+        };
+
+        // 輔助函式：推斷是否為直達車
+        const isApiExpress = (item) => {
+            if (item.TrainType !== undefined) return item.TrainType === 2;
+            if (item.LineID === 'A') {
+                const dest = item.DestinationStationID || item.DestinationStaionID || '';
+                if (dest === 'A13' || dest === 'A12') return true;
+                if (dest === 'A21' || dest === 'A22') return false;
+            }
+            return false;
+        };
+
+        trainObjects.forEach(t => {
+            const lineId = resolveLineId(t.lineKey);
+            const lineItems = lineMap[lineId];
+            if (!lineItems || lineItems.length === 0) return;
+
+            // 尋找與該列車方向相符且車種相符的資料
+            let matchItems = lineItems.filter(i => getApiDirection(i) === t.direction);
+            
+            // 如果是機場捷運，進一步區分直達與普通車
+            if (lineId === 'A') {
+                const typeMatches = matchItems.filter(i => isApiExpress(i) === t.isExpress);
+                if (typeMatches.length > 0) matchItems = typeMatches;
+            }
+
+            if (matchItems.length === 0) return;
+
+            // 取出第一筆匹配資料進行映射
+            const item = matchItems.shift();
+            
+            // 從總陣列移除以防重複分配
+            const idx = lineItems.indexOf(item);
+            if (idx >= 0) lineItems.splice(idx, 1);
+
+            const stId = item.StationID || '';
+            const status = item.TrainStatus || 0; // 若無 TrainStatus，預設為 0
+            
+            const seqIdx = t.sequence.indexOf(stId);
+            if (seqIdx >= 0 && seqIdx < t.sequence.length) {
+                t.currentStationCode = stId;
+                
+                if (status === 1 || item.EstimateTime === 0) { // 停靠中
+                    t.segmentIndex = seqIdx;
+                    t.progress = 0;
+                    t.isDwelling = true;
+                    t.dwellTimeRemaining = 3000; 
+                } else { // 駛離/前往中 (2 或 0)
+                    const prevIdx = seqIdx - t.direction;
+                    if (prevIdx >= 0 && prevIdx < t.sequence.length) {
+                        t.segmentIndex = prevIdx;
+                        // 若無確切 status，EstimateTime 較大時進度較小
+                        t.progress = (status === 2 || (item.EstimateTime !== undefined && item.EstimateTime <= 2)) ? 0.8 : 0.2;
+                    } else {
+                        t.segmentIndex = seqIdx;
+                        t.progress = 0;
+                    }
+                    t.isDwelling = false;
+                }
+                
+                const code1 = t.sequence[t.segmentIndex];
+                const code2 = t.sequence[t.segmentIndex + t.direction] || code1;
+                const st1 = MrtDataService.stations[code1];
+                const st2 = MrtDataService.stations[code2];
+                if (st1 && st2) {
+                    const lat = st1.lat + (st2.lat - st1.lat) * t.progress;
+                    const lng = st1.lng + (st2.lng - st1.lng) * t.progress;
+                    t.latLng = [lat, lng];
+                    if (t.marker) t.marker.setLatLng(t.latLng);
+                }
+            }
+        });
+    }
+
+    function resolveLineId(lineKey) {
+        const map = {
+            'BR': 'BR', 'R': 'R', 'G': 'G', 'O': 'O',
+            'BL': 'BL', 'Y': 'Y', 'LB': 'LB', 'A': 'A'
+        };
+        return map[lineKey] || lineKey;
     }
 
     function updateApiStatusBadge(pollResult) {
@@ -291,7 +408,7 @@ const AnimationEngine = (function() {
 
     function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
 
-    return { init, setLineVisibility, cleanup, restartEngine, isNighttime, checkAndSyncNightState, getTamsuiXinyiTrains };
+    return { init, setLineVisibility, cleanup, restartEngine, isNighttime, checkAndSyncNightState, getTamsuiXinyiTrains, getTrainObjects: () => trainObjects };
 })();
 
 /**

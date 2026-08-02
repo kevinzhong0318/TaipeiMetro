@@ -1,58 +1,85 @@
 #!/usr/bin/env python3
+import time
+import requests
 import datetime
 
-r_stations = [
-    ("R02", "象山"), ("R03", "台北101/世貿"), ("R04", "信義安和"), ("R05", "大安"),
-    ("R06", "大安森林公園"), ("R07", "東門"), ("R08", "中正紀念堂"), ("R09", "台大醫院"),
-    ("R10", "台北車站"), ("R11", "中山"), ("R12", "雙連"), ("R13", "民權西路"),
-    ("R14", "圓山"), ("R15", "劍潭"), ("R16", "士林"), ("R17", "芝山"),
-    ("R18", "明德"), ("R19", "石牌"), ("R20", "唭哩岸"), ("R21", "奇岩"),
-    ("R22", "北投"), ("R23", "復興崗"), ("R24", "忠義"), ("R25", "關渡"),
-    ("R26", "竹圍"), ("R27", "紅樹林"), ("R28", "淡水")
-]
+CLIENT_ID = "M11507108-c58329e5-3f1e-426a"
+CLIENT_SECRET = "4e74f084-927b-4f1e-9a37-4afa29696271"
 
-now_str = datetime.datetime.now().strftime("%H:%M:%S")
+AUTH_URL = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+API_URL = "https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TRTC?$top=300&$format=JSON"
 
-trains = [
-    {
-        "id": "TR-R-101",
-        "direction": "往 淡水 (R28)",
-        "location": "前往 [R11 中山] (進度: 45%)",
-        "station": "台北車站 (R10)",
-        "status": "🟢 演算法預估動態推算中",
-        "time": now_str
-    },
-    {
-        "id": "TR-R-102",
-        "direction": "往 象山 (R02)",
-        "location": "停靠於 [R13 雙連] (3.5s)",
-        "station": "雙連 (R13)",
-        "status": "🟢 演算法預估動態推算中",
-        "time": now_str
-    },
-    {
-        "id": "TR-R-103",
-        "direction": "往 淡水 (R28)",
-        "location": "前往 [R23 復興崗] (進度: 80%)",
-        "station": "北投 (R22)",
-        "status": "🟢 演算法預估動態推算中",
-        "time": now_str
-    },
-    {
-        "id": "TR-R-104",
-        "direction": "往 象山 (R02)",
-        "location": "前往 [R04 信義安和] (進度: 15%)",
-        "station": "大安 (R05)",
-        "status": "🟢 演算法預估動態推算中",
-        "time": now_str
-    }
-]
+def get_token():
+    try:
+        data = {
+            'grant_type': 'client_credentials',
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET
+        }
+        res = requests.post(AUTH_URL, data=data, timeout=5)
+        if res.status_code == 200:
+            return res.json().get('access_token')
+    except Exception as e:
+        print(f"Auth error: {e}")
+    return None
 
-print("\033[41m\033[37m\033[1m [DebugLogger] 淡水信義線 (R Line) 即時列車監控終端機日誌測試展示 \033[0m")
-print(f"\033[36m🕒 系統時間: {now_str} | 在線列車數: {len(trains)}\033[0m\n")
+def fetch_live_data(token):
+    try:
+        headers = {'Authorization': f'Bearer {token}'}
+        res = requests.get(API_URL, headers=headers, timeout=5)
+        if res.status_code == 200:
+            return res.json()
+        elif res.status_code == 401:
+            return "401"
+    except Exception as e:
+        print(f"API error: {e}")
+    return None
 
-print(f"{'列車 ID':<10} | {'行駛方向':<15} | {'當前位置與動態':<30} | {'當前車站':<18} | {'資料狀態':<25} | {'時間戳記'}")
-print("-" * 115)
-for t in trains:
-    print(f"{t['id']:<10} | {t['direction']:<15} | {t['location']:<30} | {t['station']:<18} | {t['status']:<25} | {t['time']}")
-print("-" * 115)
+def main():
+    token = get_token()
+    if not token:
+        print("Failed to get TDX API token.")
+        return
+
+    while True:
+        data = fetch_live_data(token)
+        if data == "401":
+            token = get_token()
+            data = fetch_live_data(token)
+
+        if data and isinstance(data, list):
+            # Filter Red Line (R)
+            r_trains = [item for item in data if item.get('LineID') in ['R', 'R22A'] or item.get('LineNo') in ['R', 'R22A']]
+            
+            now_str = datetime.datetime.now().strftime("%H:%M:%S")
+            print("\033[2J\033[H", end="") # Clear screen
+            print("\033[41m\033[37m\033[1m [DebugLogger] 淡水信義線 (R Line) TDX 實時列車監控終端 \033[0m")
+            print(f"\033[36m🕒 系統時間: {now_str} | 在線列車數: {len(r_trains)}\033[0m\n")
+            print(f"{'列車 ID':<10} | {'行駛方向':<25} | {'當前位置':<25} | {'資料狀態':<15} | {'時間戳記'}")
+            print("-" * 110)
+            
+            for t in r_trains:
+                train_id = t.get('TrainNo', 'Unknown')
+                dir_val = t.get('Direction', 0)
+                dest = t.get('DestinationStaionName', {}).get('Zh_tw', t.get('TripHeadSign', 'Unknown'))
+                
+                direction = f"往 {dest} (Dir: {dir_val})"
+                station = t.get('StationName', {}).get('Zh_tw', t.get('StationID', 'Unknown'))
+                status_cd = t.get('TrainStatus', 0)
+                
+                if status_cd == 1:
+                    loc = f"停靠於 [{station}]"
+                elif status_cd == 2:
+                    loc = f"將抵達 [{station}]"
+                else:
+                    loc = f"前往 [{station}]"
+                    
+                print(f"{train_id:<10} | {direction:<25} | {loc:<25} | {'🟢 TDX 實時':<15} | {now_str}")
+                
+            print("-" * 110)
+            print("Press Ctrl+C to exit. Refreshing every 60 seconds...")
+            
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
