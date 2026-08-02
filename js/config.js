@@ -8,7 +8,7 @@ const MrtDataService = (function() {
     const lines = {
         BR:   { name: "文湖線", color: "#C48C31", weight: 6, termini: ["動物園", "南港展覽館"] },
         R:    { name: "淡水信義線", color: "#E3002C", weight: 6, termini: ["象山", "淡水"] },
-        R22A: { name: "新北投支線", color: "#E3002C", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["北投", "新北投"] },
+        R22A: { name: "新北投支線", color: "#FD599C", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["北投", "新北投"] },
         G:    { name: "松山新店線", color: "#009065", weight: 6, termini: ["新店", "松山"] },
         G03A: { name: "小碧潭支線", color: "#009065", weight: 3.5, dash: "5, 5", isBranch: true, termini: ["七張", "小碧潭"] },
         O:    { name: "中和新蘆線 (迴龍線)", color: "#F8B61C", weight: 6, termini: ["南勢角", "迴龍"] },
@@ -17,7 +17,10 @@ const MrtDataService = (function() {
         Y:    { name: "環狀線", color: "#FFD100", weight: 6, termini: ["大坪林", "新北產業園區"] },
         LB:   { name: "三鶯線 (建設中)", color: "#76B7B2", weight: 5, isTrial: true, termini: ["頂埔", "鶯桃福德"] },
         A:    { name: "桃園機場捷運 (普通車)", color: "#84005C", weight: 6, termini: ["台北車站", "老街溪"] },
-        A_Express: { name: "桃園機捷 (直達車)", color: "#84005C", weight: 6, isExpress: true, termini: ["台北車站", "機場第二航廈"] }
+        A_Express: { name: "桃園機捷 (直達車)", color: "#84005C", weight: 6, isExpress: true, termini: ["台北車站", "機場第二航廈"] },
+        V:    { name: "淡海輕軌 (綠山線)", color: "#8B0000", weight: 5, termini: ["紅樹林", "崁頂"] },
+        V_Blue: { name: "淡海輕軌 (藍海線)", color: "#8B0000", weight: 5, isBranch: true, termini: ["紅樹林", "淡水漁人碼頭"] },
+        K:    { name: "安坑輕軌", color: "#C0C0C0", weight: 5, termini: ["雙城", "十四張"] }
     };
 
     const shapes = {
@@ -165,7 +168,7 @@ const MrtDataService = (function() {
 
         // Y 環狀線
         "Y07": { name: "大坪林", nameEn: "Dapinglin", lat: 24.9830, lng: 121.5415, shape: "square", lines: ["Y", "G"] },
-        "Y08": { name: "十四張", nameEn: "Shishizhang", lat: 24.9854, lng: 121.5306, shape: "circle", lines: ["Y"] },
+        "Y08": { name: "十四張", nameEn: "Shisizhang", lat: 24.9854, lng: 121.5306, shape: "square", lines: ["Y", "K"] },
         "Y09": { name: "秀朗橋", nameEn: "Xiulang Bridge", lat: 24.9908, lng: 121.5245, shape: "circle", lines: ["Y"] },
         "Y10": { name: "景平", nameEn: "Jingping", lat: 24.9918, lng: 121.5152, shape: "circle", lines: ["Y"] },
         "Y11": { name: "景安", nameEn: "Jingan", lat: 24.9937, lng: 121.5049, shape: "circle", lines: ["Y", "O"] },
@@ -215,7 +218,34 @@ const MrtDataService = (function() {
         "A19": { name: "桃園體育園區", nameEn: "Taoyuan Sports Park", lat: 25.0000, lng: 121.2010, shape: "stadium", lines: ["A"] },
         "A20": { name: "興南", nameEn: "Xingnan", lat: 24.9850, lng: 121.2090, shape: "circle", lines: ["A"] },
         "A21": { name: "環北", nameEn: "Huanbei", lat: 24.9680, lng: 121.2180, shape: "circle", lines: ["A"] },
-        "A22": { name: "老街溪", nameEn: "Laojiesi", lat: 24.9580, lng: 121.2210, shape: "diamond", lines: ["A"] }
+        "A22": { name: "老街溪", nameEn: "Laojiesi", lat: 24.9580, lng: 121.2210, shape: "diamond", lines: ["A"] },
+
+        // V 淡海輕軌
+        "V01": { name: "紅樹林", nameEn: "Hongshulin", lat: 25.1545, lng: 121.4588, shape: "diamond", lines: ["V", "V_Blue", "R"] },
+        "V02": { name: "竿蓁林", nameEn: "Ganzhenlin", lat: 25.1601, lng: 121.4545, shape: "circle", lines: ["V", "V_Blue"] },
+        "V03": { name: "淡金鄧公", nameEn: "Danjin Denggong", lat: 25.1651, lng: 121.4520, shape: "circle", lines: ["V", "V_Blue"] },
+        "V04": { name: "淡江大學", nameEn: "Tamkang University", lat: 25.1735, lng: 121.4485, shape: "stadium", lines: ["V", "V_Blue"] },
+        "V05": { name: "淡金北新", nameEn: "Danjin Beixin", lat: 25.1788, lng: 121.4478, shape: "circle", lines: ["V", "V_Blue"] },
+        "V06": { name: "新市一路", nameEn: "Xinshi 1st Rd.", lat: 25.1852, lng: 121.4468, shape: "circle", lines: ["V", "V_Blue"] },
+        "V07": { name: "淡水行政中心", nameEn: "Tamsui District Office", lat: 25.1895, lng: 121.4442, shape: "square", lines: ["V", "V_Blue"] },
+        "V08": { name: "濱海義山", nameEn: "Binhai Yishan", lat: 25.1912, lng: 121.4379, shape: "circle", lines: ["V", "V_Blue"] },
+        "V09": { name: "濱海沙崙", nameEn: "Binhai Shalun", lat: 25.1916, lng: 121.4285, shape: "triangle", lines: ["V", "V_Blue"] },
+        "V10": { name: "淡海新市鎮", nameEn: "Danhai New Town", lat: 25.1969, lng: 121.4285, shape: "circle", lines: ["V"] },
+        "V11": { name: "崁頂", nameEn: "Kanding", lat: 25.2016, lng: 121.4292, shape: "square", lines: ["V"] },
+        "V28": { name: "台北海洋大學", nameEn: "Taipei Univ. of Marine Tech.", lat: 25.1888, lng: 121.4255, shape: "stadium", lines: ["V_Blue"] },
+        "V27": { name: "沙崙", nameEn: "Shalun", lat: 25.1859, lng: 121.4206, shape: "circle", lines: ["V_Blue"] },
+        "V26": { name: "淡水漁人碼頭", nameEn: "Tamsui Fisherman's Wharf", lat: 25.1824, lng: 121.4150, shape: "star", lines: ["V_Blue"] },
+
+        // K 安坑輕軌
+        "K01": { name: "雙城", nameEn: "Shuangcheng", lat: 24.9501, lng: 121.4925, shape: "circle", lines: ["K"] },
+        "K02": { name: "玫瑰中國城", nameEn: "Rose China Town", lat: 24.9547, lng: 121.4947, shape: "circle", lines: ["K"] },
+        "K03": { name: "台北小城", nameEn: "Taipei Xiaocheng", lat: 24.9566, lng: 121.4981, shape: "circle", lines: ["K"] },
+        "K04": { name: "耕莘安康院區", nameEn: "Cardinal Tien Hospital Ankang Branch", lat: 24.9602, lng: 121.5037, shape: "cross", lines: ["K"] },
+        "K05": { name: "景文科大", nameEn: "Jinwen University of Science and Technology", lat: 24.9645, lng: 121.5085, shape: "stadium", lines: ["K"] },
+        "K06": { name: "安康", nameEn: "Ankang", lat: 24.9686, lng: 121.5168, shape: "circle", lines: ["K"] },
+        "K07": { name: "陽光運動公園", nameEn: "Sunshine Sports Park", lat: 24.9743, lng: 121.5173, shape: "diamond", lines: ["K"] },
+        "K08": { name: "新和國小", nameEn: "Xinhe Elementary School", lat: 24.9818, lng: 121.5234, shape: "circle", lines: ["K"] },
+        "K09": { name: "十四張", nameEn: "Shisizhang", lat: 24.9854, lng: 121.5306, shape: "square", lines: ["K", "Y"] }
     };
 
     const sequences = {
@@ -230,7 +260,10 @@ const MrtDataService = (function() {
         Y:  ["Y07","Y08","Y09","Y10","Y11","Y12","Y13","Y14","Y15","Y16","Y17","Y18","Y19","Y20"],
         LB: ["LB01","LB02","LB03","LB04","LB05","LB06","LB07","LB08","LB09","LB10","LB11","LB12"],
         A:  ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13","A14a","A15","A16","A17","A18","A19","A20","A21","A22"],
-        A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13"]
+        A_Express: ["A01","A02","A03","A04","A05","A06","A07","A08","A09","A10","A11","A12","A13"],
+        V:  ["V01","V02","V03","V04","V05","V06","V07","V08","V09","V10","V11"],
+        V_Blue: ["V01","V02","V03","V04","V05","V06","V07","V08","V09","V28","V27","V26"],
+        K:  ["K01","K02","K03","K04","K05","K06","K07","K08","K09"]
     };
 
     const expressStops = ["A01", "A03", "A08", "A12", "A13"];

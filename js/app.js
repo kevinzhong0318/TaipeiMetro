@@ -208,16 +208,19 @@ const AnimationEngine = (function() {
         if (isNighttime()) return; // 00:00 ~ 06:00 夜間非營運時段不發車
 
         const trainConfigs = [
-            { line: "BR", speed: 0.0003, count: 3 },
-            { line: "R",  speed: 0.00025, count: 4 },
-            { line: "G",  speed: 0.00028, count: 3 },
-            { line: "O",  speed: 0.00026, count: 3 },
-            { line: "O_Luzhou", speed: 0.00026, count: 2 },
-            { line: "BL", speed: 0.00024, count: 4 },
-            { line: "Y",  speed: 0.00032, count: 3 },
-            { line: "LB", speed: 0.00035, count: 2 },
-            { line: "A",  speed: 0.00025, count: 3, isCommuter: true },
-            { line: "A_Express", speed: 0.00042, count: 2, isExpress: true }
+            { line: "BR", speed: 0.0003, count: 24 },
+            { line: "R",  speed: 0.00025, count: 28 },
+            { line: "G",  speed: 0.00028, count: 22 },
+            { line: "O",  speed: 0.00026, count: 22 },
+            { line: "O_Luzhou", speed: 0.00026, count: 10 },
+            { line: "BL", speed: 0.00024, count: 28 },
+            { line: "Y",  speed: 0.00032, count: 12 },
+            { line: "LB", speed: 0.00035, count: 8 },
+            { line: "A",  speed: 0.00025, count: 16, isCommuter: true },
+            { line: "A_Express", speed: 0.00042, count: 8, isExpress: true },
+            { line: "V", speed: 0.0003, count: 6 },
+            { line: "V_Blue", speed: 0.0003, count: 6 },
+            { line: "K", speed: 0.0003, count: 5 }
         ];
 
         let trainIdCounter = 101;
@@ -303,10 +306,10 @@ const AnimationEngine = (function() {
         if (!isNighttime()) {
             trainObjects.forEach(t => {
                 if (!lineVisibility[t.lineKey]) {
-                    t.marker.setOpacity(0);
+                    if (t.marker) t.marker.setOpacity(0);
                     return;
                 } else {
-                    t.marker.setOpacity(1);
+                    if (t.marker) t.marker.setOpacity(1);
                 }
 
                 if (t.isDwelling) {
@@ -347,11 +350,8 @@ const AnimationEngine = (function() {
                     }
                 }
 
-                const idx1 = t.segmentIndex;
-                const idx2 = t.segmentIndex + t.direction;
-                const code1 = t.sequence[idx1];
-                const code2 = t.sequence[idx2] || t.sequence[idx1];
-
+                const code1 = t.sequence[t.segmentIndex];
+                const code2 = t.sequence[t.segmentIndex + t.direction] || code1;
                 const st1 = MrtDataService.stations[code1];
                 const st2 = MrtDataService.stations[code2];
 
@@ -359,7 +359,7 @@ const AnimationEngine = (function() {
                     const lat = st1.lat + (st2.lat - st1.lat) * t.progress;
                     const lng = st1.lng + (st2.lng - st1.lng) * t.progress;
                     t.latLng = [lat, lng];
-                    t.marker.setLatLng(t.latLng);
+                    if (t.marker) t.marker.setLatLng(t.latLng);
 
                     const dy = st2.lat - st1.lat;
                     const dx = (st2.lng - st1.lng) * Math.cos(st1.lat * Math.PI / 180);
@@ -452,6 +452,16 @@ const UIController = (function() {
         document.getElementById('btnCloseRoutePlannerModal').addEventListener('click', closeRoutePlannerModal);
         routeModal.addEventListener('click', (e) => { if (e.target === routeModal) closeRoutePlannerModal(); });
 
+        // Train Stats Modal Toggle
+        const trainStatsModal = document.getElementById('trainStatsModal');
+        document.getElementById('btnTrainStatsToggle').addEventListener('click', showTrainStatsModal);
+        document.getElementById('btnCloseTrainStatsModal').addEventListener('click', () => {
+            trainStatsModal.classList.add('opacity-0', 'pointer-events-none');
+        });
+        trainStatsModal.addEventListener('click', (e) => { 
+            if (e.target === trainStatsModal) trainStatsModal.classList.add('opacity-0', 'pointer-events-none'); 
+        });
+
         document.getElementById('btnCloseDrawer').addEventListener('click', closeDrawer);
 
         initSettingsForm();
@@ -505,6 +515,7 @@ const UIController = (function() {
 
             TDXService.setMode(selectedMode);
             TDXService.saveCredentials(id, secret);
+            TimelineController.setMode(selectedMode);
 
             const badge = document.getElementById('dataSourceBadge');
 
@@ -781,7 +792,54 @@ const UIController = (function() {
     function openDrawer() { document.getElementById('infoDrawer').classList.remove('translate-y-96', 'opacity-0'); }
     function closeDrawer() { document.getElementById('infoDrawer').classList.add('translate-y-96', 'opacity-0'); }
 
-    return { init, selectStation, showStationDrawer, showTrainDrawer };
+    function showTrainStatsModal() {
+        const trains = AnimationEngine.getTrainObjects();
+        const stats = {};
+        const mode = TDXService.getMode();
+        
+        let total = 0;
+        trains.forEach(t => {
+            if (!stats[t.lineKey]) stats[t.lineKey] = 0;
+            stats[t.lineKey]++;
+            total++;
+        });
+        
+        let tableHtml = `<table class="w-full text-sm text-left text-gray-300">
+            <thead class="text-xs text-gray-400 bg-gray-700/30 uppercase border-b border-gray-600/50">
+                <tr>
+                    <th class="px-4 py-2">路線名稱</th>
+                    <th class="px-4 py-2 text-right">在線車輛數</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        Object.entries(MrtDataService.lines).forEach(([key, info]) => {
+            const count = stats[key] || 0;
+            if (count > 0 || !info.isBranch) {
+                tableHtml += `
+                <tr class="border-b border-gray-700/50 hover:bg-gray-600/20">
+                    <td class="px-4 py-2 flex items-center gap-2 font-medium">
+                        <span class="w-3 h-3 rounded-full" style="background:${info.color}"></span>
+                        ${info.name}
+                    </td>
+                    <td class="px-4 py-2 text-right font-mono font-bold">${count}</td>
+                </tr>`;
+            }
+        });
+
+        tableHtml += `
+            <tr class="font-bold text-emerald-400 bg-gray-800/50">
+                <td class="px-4 py-3">總計</td>
+                <td class="px-4 py-3 text-right font-mono text-base">${total}</td>
+            </tr>
+            </tbody>
+        </table>`;
+
+        document.getElementById('trainStatsTableContainer').innerHTML = tableHtml;
+        document.getElementById('trainStatsModal').classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    return { init, selectStation, showStationDrawer, showTrainDrawer, showTrainStatsModal };
 })();
 
 // Application Main Entry Point Initialization

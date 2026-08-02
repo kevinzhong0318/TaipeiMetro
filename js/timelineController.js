@@ -1,15 +1,15 @@
 /**
  * =========================================================================
- * js/timelineController.js - 自訂時間選擇器與列車 1x/5x/10x/50x/100x/500x 倍速播放控制器
- * 調整時間軸不擅自切換日夜主題，完全保持使用者當前選擇之日間或夜間模式
+ * js/timelineController.js - 即時時間與模擬控制 (TimelineController)
  * =========================================================================
  */
 const TimelineController = (function() {
-    let isCustomMode = false;       // 是否開啟自訂/虛擬時間模式
-    let speedMultiplier = 1;        // 預設 1x 速度 multiplier (1, 5, 10, 50, 100, 500)
-    let virtualMinuteOfDay = 480;   // 預設 08:00 AM (8 * 60 = 480 分鐘)
-    let lastTickTime = Date.now();
     let tickIntervalId = null;
+    let mode = 'tdx'; // 'tdx' or 'mock'
+    let isCustomMode = false;
+    let virtualMinuteOfDay = 480;
+    let speedMultiplier = 1;
+    let lastTickTime = Date.now();
 
     function init() {
         bindEvents();
@@ -17,35 +17,13 @@ const TimelineController = (function() {
     }
 
     function bindEvents() {
-        const timeInput = document.getElementById('virtualTimeInput');
         const timeSlider = document.getElementById('timelineSlider');
         const speedButtons = document.querySelectorAll('.speed-btn');
-
-        const onTimeChange = (val) => {
-            if (val) {
-                const [h, m] = val.split(':').map(Number);
-                virtualMinuteOfDay = h * 60 + m;
-                isCustomMode = true;
-                if (timeSlider) timeSlider.value = virtualMinuteOfDay;
-                updateUI();
-                if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
-            }
-        };
-
-        if (timeInput) {
-            timeInput.addEventListener('change', (e) => onTimeChange(e.target.value));
-            timeInput.addEventListener('input', (e) => onTimeChange(e.target.value));
-        }
 
         if (timeSlider) {
             timeSlider.addEventListener('input', (e) => {
                 virtualMinuteOfDay = parseInt(e.target.value, 10);
                 isCustomMode = true;
-                if (timeInput) {
-                    const h = String(Math.floor(virtualMinuteOfDay / 60)).padStart(2, '0');
-                    const m = String(virtualMinuteOfDay % 60).padStart(2, '0');
-                    timeInput.value = `${h}:${m}`;
-                }
                 updateUI();
                 if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
             });
@@ -54,7 +32,7 @@ const TimelineController = (function() {
         speedButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const spd = parseInt(btn.dataset.speed, 10);
-                setSpeed(spd);
+                speedMultiplier = spd;
 
                 speedButtons.forEach(b => {
                     b.classList.remove('bg-emerald-500', 'text-white', 'font-bold');
@@ -64,32 +42,30 @@ const TimelineController = (function() {
                 btn.classList.add('bg-emerald-500', 'text-white', 'font-bold');
             });
         });
-
-        const btnRealtimeReset = document.getElementById('btnRealtimeReset');
-        if (btnRealtimeReset) {
-            btnRealtimeReset.addEventListener('click', () => {
-                isCustomMode = false;
-                setSpeed(1);
-                updateUI();
-                if (window.AnimationEngine) window.AnimationEngine.checkAndSyncNightState();
-            });
-        }
     }
 
-    function setSpeed(mult) {
-        speedMultiplier = mult;
+    function setMode(newMode) {
+        mode = newMode;
+        const mockControls = document.getElementById('mockModeControls');
+        if (mode === 'mock') {
+            mockControls.classList.remove('hidden');
+            mockControls.classList.add('flex');
+            isCustomMode = true;
+        } else {
+            mockControls.classList.add('hidden');
+            mockControls.classList.remove('flex');
+            isCustomMode = false;
+            speedMultiplier = 1;
+        }
+        updateUI();
     }
 
     function getSpeedMultiplier() {
         return speedMultiplier;
     }
 
-    function isCustomTime() {
-        return isCustomMode;
-    }
-
     function getCurrentTimeDate() {
-        if (!isCustomMode) {
+        if (!isCustomMode || mode === 'tdx') {
             return new Date();
         } else {
             const d = new Date();
@@ -109,19 +85,12 @@ const TimelineController = (function() {
             const deltaMs = now - lastTickTime;
             lastTickTime = now;
 
-            if (isCustomMode) {
-                // High-speed virtual minute increment
+            if (mode === 'mock' && isCustomMode) {
                 virtualMinuteOfDay += (deltaMs / 1000) * (speedMultiplier / 60) * 1.5;
                 if (virtualMinuteOfDay >= 1440) virtualMinuteOfDay = 0;
 
                 const slider = document.getElementById('timelineSlider');
-                const input = document.getElementById('virtualTimeInput');
                 if (slider) slider.value = Math.floor(virtualMinuteOfDay);
-                if (input) {
-                    const h = String(Math.floor(virtualMinuteOfDay / 60)).padStart(2, '0');
-                    const m = String(Math.floor(virtualMinuteOfDay % 60).padStart(2, '0'));
-                    input.value = `${h}:${m}`;
-                }
             }
             updateUI();
         }, 150);
@@ -129,12 +98,18 @@ const TimelineController = (function() {
 
     function updateUI() {
         const currentDate = getCurrentTimeDate();
+        const timeString = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
+        
         const clockEl = document.getElementById('systemClock');
         if (clockEl) {
-            clockEl.innerText = currentDate.toLocaleTimeString('zh-TW', { hour12: false });
+            clockEl.innerText = timeString;
         }
 
-        // Nighttime sensing check for train operation (00:00 ~ 06:00 非營運時段)
+        const bottomClock = document.getElementById('bottomRealtimeClock');
+        if (bottomClock) {
+            bottomClock.innerText = timeString;
+        }
+
         const hour = currentDate.getHours();
         const isNight = hour >= 0 && hour < 6;
         const badgeEl = document.getElementById('systemOpBadge');
@@ -145,13 +120,15 @@ const TimelineController = (function() {
                 badgeEl.className = "text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/30 flex items-center gap-1 shrink-0";
                 textEl.innerText = "🌙 目前為非營運時間 (00:00~06:00 末班車已收班)";
                 const countEl = document.getElementById('activeTrainCount');
-                if (countEl) countEl.innerText = "0 (收班)";
+                if (countEl) countEl.innerText = "0";
             } else {
                 badgeEl.className = "text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0";
-                textEl.innerText = `🟢 全線正常營運 06:00~24:00 (${speedMultiplier}x 倍速)`;
+                textEl.innerText = mode === 'mock' 
+                    ? `🟢 模擬營運中 (${speedMultiplier}x)` 
+                    : `🟢 全線正常營運 06:00~24:00 (即時動態同步中)`;
             }
         }
     }
 
-    return { init, setSpeed, getSpeedMultiplier, isCustomTime, getCurrentTimeDate };
+    return { init, setMode, getSpeedMultiplier, getCurrentTimeDate };
 })();
