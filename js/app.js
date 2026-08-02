@@ -44,6 +44,13 @@ const AnimationEngine = (function() {
     }
 
     /**
+     * 取得淡水信義線 (R Line / 紅線) 當前所有在線運行列車 (專供 TamsuiXinyiDebugLogger 除錯用)
+     */
+    function getTamsuiXinyiTrains() {
+        return trainObjects.filter(t => t.lineKey === 'R' || t.sequenceKey === 'R');
+    }
+
+    /**
      * 啟動背景 TDX API 輪詢與異常自動檢測
      */
     function startApiPolling() {
@@ -284,7 +291,7 @@ const AnimationEngine = (function() {
 
     function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
 
-    return { init, setLineVisibility, cleanup, restartEngine, isNighttime, checkAndSyncNightState };
+    return { init, setLineVisibility, cleanup, restartEngine, isNighttime, checkAndSyncNightState, getTamsuiXinyiTrains };
 })();
 
 /**
@@ -666,4 +673,7 @@ window.addEventListener('DOMContentLoaded', () => {
     TimelineController.init();
     AnimationEngine.init();
     UIController.init();
+    if (window.TamsuiXinyiDebugLogger) {
+        TamsuiXinyiDebugLogger.init();
+    }
 });
