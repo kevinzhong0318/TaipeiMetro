@@ -65,7 +65,7 @@ const TDXService = (function () {
         if (!accessToken) { if (!(await fetchAccessToken())) return null; }
         try {
             const r = await fetch(
-                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TRTC?$top=300&$format=JSON',
+                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TRTC?$top=1000&$format=JSON',
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             if (r.ok) return await r.json();
@@ -78,7 +78,7 @@ const TDXService = (function () {
         if (!accessToken) return null;
         try {
             const r = await fetch(
-                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC?$top=100&$format=JSON',
+                'https://tdx.transportdata.tw/api/basic/v2/Rail/Metro/LiveBoard/TYMC?$top=300&$format=JSON',
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             if (r.ok) return await r.json();
@@ -101,7 +101,7 @@ const TDXService = (function () {
         if (!combined.some(i => (i.LineID || i.LineNo) && (i.StationID || i.StationName)))
             return { isAnomaly: true, reason: '⚠️ 欄位格式異常' };
 
-        const hash = combined.slice(0, 10).map(i => `${i.LineID}_${i.StationID}_${i.TrainNo || ''}`).join('|');
+        const hash = combined.slice(0, 50).map(i => `${i.LineID}_${i.StationID}_${i.Direction}_${i.EstimateTime}_${i.TrainStatus}`).join('|');
         if (hash && hash === lastDataHash) {
             stagnantCount++;
             if (stagnantCount >= 3) return { isAnomaly: true, reason: '⚠️ 數據停滯' };
