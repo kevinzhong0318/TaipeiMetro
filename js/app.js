@@ -1,12 +1,12 @@
 /**
  * =========================================================================
- * js/app.js - 列車發車動畫循環 (AnimationEngine)、模式切換 Cleanup / ResetMap、UI 控制與應用程式初始化
+ * js/app.js - 列車發車動畫循環 (AnimationEngine)、API 異常檢測自動備援 (Fallback)、UI 控制與模式 Cleanup
  * =========================================================================
  */
 
 /**
  * -------------------------------------------------------------------------
- * 1. AnimationEngine: 列車動畫循環與 06:00~24:00 營運發車
+ * 1. AnimationEngine: 列車動畫循環、06:00~24:00 發車與 TDX API 異常自動接管備援演算法
  * -------------------------------------------------------------------------
  */
 const AnimationEngine = (function() {
@@ -14,6 +14,7 @@ const AnimationEngine = (function() {
     let lastTimestamp = 0;
     let lineVisibility = {};
     let animFrameId = null;
+    let apiPollIntervalId = null;
 
     Object.keys(MrtDataService.lines).forEach(k => lineVisibility[k] = true);
 
@@ -36,8 +37,47 @@ const AnimationEngine = (function() {
     }
 
     function init() {
+        cleanup();
         spawnTrains();
         animFrameId = requestAnimationFrame(animate);
+        startApiPolling();
+    }
+
+    /**
+     * 啟動背景 TDX API 輪詢與異常自動檢測
+     */
+    function startApiPolling() {
+        if (apiPollIntervalId) clearInterval(apiPollIntervalId);
+
+        apiPollIntervalId = setInterval(async () => {
+            if (TDXService.getMode() === 'tdx') {
+                const pollResult = await TDXService.pollLiveTrains();
+                updateApiStatusBadge(pollResult);
+
+                // 當檢測到 API 數據異常或斷線時，接管切換至動態預估模擬備援，保證列車不卡死或消失
+                if (pollResult.isAnomaly || pollResult.mode === 'fallback') {
+                    if (trainObjects.length === 0 && !isNighttime()) {
+                        spawnTrains();
+                    }
+                }
+            }
+        }, 15000); // 每 15 秒輪詢檢查 API 狀態
+    }
+
+    function updateApiStatusBadge(pollResult) {
+        const badge = document.getElementById('dataSourceBadge');
+        if (!badge) return;
+
+        if (pollResult.mode === 'mock') {
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 🟡 模擬數據運行中`;
+            badge.className = "text-xs font-normal text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20";
+        } else if (pollResult.isAnomaly || pollResult.mode === 'fallback') {
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span> ⚠️ 部分路線 API 數據異常，已啟動預估動態模擬`;
+            badge.className = "text-xs font-semibold text-rose-300 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/30 shadow-sm";
+        } else {
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 🟢 TDX API 連線正常`;
+            badge.className = "text-xs font-normal text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20";
+        }
     }
 
     function spawnTrains() {
@@ -213,11 +253,19 @@ const AnimationEngine = (function() {
         animFrameId = requestAnimationFrame(animate);
     }
 
+    /**
+     * 模式切換時徹底清除舊動畫禎與 Marker，防範重複繪製與記憶體洩漏
+     */
     function cleanup() {
         if (animFrameId) {
             cancelAnimationFrame(animFrameId);
             animFrameId = null;
         }
+        if (apiPollIntervalId) {
+            clearInterval(apiPollIntervalId);
+            apiPollIntervalId = null;
+        }
+
         const map = MapController.getMap();
         trainObjects.forEach(t => {
             if (t.marker && map) map.removeLayer(t.marker);
@@ -231,6 +279,7 @@ const AnimationEngine = (function() {
         cleanup();
         spawnTrains();
         animFrameId = requestAnimationFrame(animate);
+        startApiPolling();
     }
 
     function setLineVisibility(lineKey, visible) { lineVisibility[lineKey] = visible; }
@@ -337,7 +386,7 @@ const UIController = (function() {
 
             if (selectedMode === 'tdx') {
                 const statusEl = document.getElementById('tdxAuthStatus');
-                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> 連線與驗證 Token 中...`;
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> 連線與驗證 OAuth Token 中...`;
                 badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> 🔴 連線驗證中`;
                 badge.className = "text-xs font-normal text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20";
                 
@@ -348,10 +397,10 @@ const UIController = (function() {
                     badge.className = "text-xs font-normal text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20";
                     alert("成功連線至交通部 TDX API！圖層與動畫已重整加載。");
                 } else {
-                    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> <span class="text-rose-400 font-bold">認證失敗，請檢查 Client ID 與 Secret</span>`;
-                    badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 🔴 驗證失敗/降級模擬`;
-                    badge.className = "text-xs font-normal text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20";
-                    alert("TDX API 認證失敗，已切換回降級模擬狀態。");
+                    statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> <span class="text-rose-400 font-bold">認證失敗或 API 異常，已自動啟動預估動態模擬</span>`;
+                    badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span> ⚠️ 部分路線 API 數據異常，已啟動預估動態模擬`;
+                    badge.className = "text-xs font-semibold text-rose-300 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/30 shadow-sm";
+                    alert("TDX API 認證或連線異常，系統已自動為您啟動動態模擬備援！");
                 }
             } else {
                 badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 🟡 模擬數據運行中`;

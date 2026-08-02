@@ -1,10 +1,11 @@
 # 大台北捷運 & 機場捷運 即時動態地圖 | Greater Taipei & Taoyuan Airport MRT Live Map (Mini Metro Style)
 
-> 一個結合「真實地理地圖 (Leaflet.js + CartoDB)」與極簡「《Mini Metro》幾何美學」的大台北捷運與桃園機場捷運即時地圖 Web 專案。
+> 一個結合「真實地理地圖 (Leaflet.js + CartoDB)」、「交通部 TDX API OAuth 2.0 即時串接」、「API 數據異常自動檢測與動態模擬備援機制 (Anomaly Fallback)」，以及極簡「《Mini Metro》幾何美學」的大台北捷運與桃園機場捷運即時 Web 專案。
 
 ![License](https://img.shields.io/badge/License-MIT-emerald.svg)
 ![Leaflet](https://img.shields.io/badge/Leaflet-v1.9.4-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v3.0-38bdf8.svg)
+![TDX API](https://img.shields.io/badge/TDX_API-v2.0-84005C.svg)
 
 ---
 
@@ -12,7 +13,7 @@
 
 本專案使用前端原生技術（HTML5, Tailwind CSS, Leaflet.js, Vanilla JS）打造，並採用**高維度多檔案模組化架構 (Multi-file Architecture)** 拆分。將台北捷運 (Taipei Metro TRTC) 各主線、**中和新蘆線 (含迴龍線與蘆洲線分支 `O_Luzhou`)**、支線、**官方最新三鶯線 (San-Ying Line LB01~LB12)** 以及 **桃園機場捷運 (Taoyuan Airport MRT)** 精確繪製於開源地圖上。
 
-本系統具備「**完全取消日夜自動模式 (純手動 ☀️日間 ↔ 🌙夜間 點擊切換)**」、「**桃園機捷直達特快車經典紫色塗裝 (`#84005C`)**」、「**最高 500 倍超極速播放控制 (`1x`, `5x`, `10x`, `50x`, `100x`, `500x`)**」、「**模擬列車營運時間規範為 06:00 ~ 24:00**」、「**機捷直達特快車於 A13 機場第二航廈迴轉**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
+本系統具備「**交通部 TDX OAuth 2.0 API 串接**」、「**API 數據異常偵測與列車預估行駛動畫無縫接管 (列車永不卡死/消失)**」、「**純手動 ☀️日間 ↔ 🌙夜間 地圖底圖切換**」、「**桃園機捷直達特快車經典紫色塗裝 (`#84005C`) 於 A13 迴轉**」、「**最高 500 倍超極速播放控制 (`1x`, `5x`, `10x`, `50x`, `100x`, `500x`)**」、「**模擬列車營運時間規範為 06:00 ~ 24:00**」、「**模擬模式自訂時間選擇器 (Time Picker)**」、「**官方確切三鶯線 12 車站 (LB01 頂埔 ➔ LB12 鶯桃福德)**」、「**模式切換徹底重置與記憶體清理 (`cleanup()`)**」、「**站對站路徑規劃器 (`RoutePlanner` BFS 最短路徑 + 脈衝動態光點導引動畫)**」等核心功能。
 
 ---
 
@@ -27,10 +28,10 @@ metro/
 ├── js/
 │   ├── config.js         # 路線數據（機捷特快車紫色 #84005C、橘線蘆洲支線 O_Luzhou）、車站座標、機捷 A13 迴轉、三鶯線 12 站 (MrtDataService)
 │   ├── map.js            # Leaflet 地圖、CARTO 底圖 (☀️日間 Voyager / 🌙夜間 Dark Matter 切換)、Zoom 14 站名與 GPS (MapController)
-│   ├── tdxApi.js         # TDX OAuth 2.0 認證與 API 即時資料處理 (TDXService)
+│   ├── tdxApi.js         # TDX OAuth 2.0 認證、LiveBoard 輪詢與 API 數據異常檢測/備援判定 (TDXService)
 │   ├── routePlanner.js   # 站對站 BFS 搜尋、轉乘分析、高亮軌道線與平滑沿線移動導引動畫 (RoutePlanner)
 │   ├── timelineController.js # 時間軸 Slider / Time Input 與 500x 倍速控制器 (TimelineController)
-│   └── app.js            # 紫色直達車動畫 06:00~24:00 發車循環 (AnimationEngine) 與 UIController 控制器 (UIController)
+│   └── app.js            # 紫色直達車動畫 06:00~24:00 發車循環、API 異常自動接管備援 (AnimationEngine) 與 UIController (UIController)
 └── README.md             # 專案完整說明與 Git 工作流指引
 ```
 
@@ -38,43 +39,53 @@ metro/
 
 ## ✨ 核心功能與亮點 (Key Features & Highlights)
 
-### 1. ☀️/🌙 獨立直覺手動日夜切換 (Direct Manual Light/Dark Mode)
-- 應使用者需求完全取消日夜自動模式。
-- 點擊右上角 `☀️ 日間模式` / `🌙 夜間模式` 按鈕，即可一鍵流暢切換地圖底圖 (CARTO Voyager / CARTO Dark Matter) 與高對比 UI。
-- 拖曳時間軸時主題完全保持不變，給予使用者全權主導權。
+### 1. 🌐 交通部 TDX API 完整串接與 OAuth 2.0 驗證
+- **OAuth 2.0 認證**：支援在前端設定 Modal 輸入 Client ID 與 Client Secret，發送 POST 請求至 TDX 驗證伺服器取得 Bearer Access Token。
+- **LiveBoard API**：即時輪詢 TRTC (台北捷運) 與 TYMC (桃園機捷) 之 `/Rail/Metro/LiveBoard` 資料。
+
+### 2. 🛡️ API 資料異常判定與動態模擬無縫接管 (Anomaly Detection & Fallback)
+- **異常判定機制**：
+  - 網路連線失敗或 HTTP 非 200 回應。
+  - API 回傳陣列為空值。
+  - 必要數據欄位缺失（如 `LineID`、`StationID`）。
+  - 連續 3 次輪詢資料時間戳與列車位置停滯不前 (Stagnant Data)。
+- **動態備援接管**：
+  - 當檢測到 API 異常時，系統**絕不讓畫面上的列車卡死或消失**；而是自動切換至動態預估模擬模式 (`AnimationEngine`)，依據系統時間與預設班表順暢推算列車位置並補全動畫。
+- **視覺警示標籤**：
+  - 狀態列提示：`<span class="text-rose-300">⚠️ 部分路線 API 數據異常，已啟動預估動態模擬</span>`。
 
 ---
 
 ## 🌿 Standard Git Branching Workflow 指引
 
-在開發新功能分支（例如 `feature/remove-auto-theme-mode-v22`）時，請遵循以下 Git 操作流程：
+在開發新功能分支（例如 `feature/tdx-api-fallback-system`）時，請遵循以下 Git 操作流程：
 
 ```bash
-# 1. 切換至 main 分支並拉取最新遠端程式碼
+# 1. 切換至 main 主線分支並拉取最新遠端程式碼
 git checkout main
 git pull origin main
 
-# 2. 建立並切換至新功能分支
-git checkout -b feature/remove-auto-theme-mode-v22
+# 2. 建立並切換至新功能開發分支
+git checkout -b feature/tdx-api-fallback-system
 
-# 3. 進行程式碼開發與測試，確認無誤後 Commit
+# 3. 進行程式碼開發與測試，確認無誤後提交 Commit
 git status
 git add .
-git commit -m "refactor: remove auto theme sensing system per user request"
+git commit -m "feat: complete TDX API integration with anomaly detection and dynamic fallback animation engine"
 
 # 4. 推送功能分支至 GitHub 遠端
-git push -u origin feature/remove-auto-theme-mode-v22
+git push -u origin feature/tdx-api-fallback-system
 
-# 5. 切換回 main 分支並進行安全合併 (Merge)
+# 5. 切換回 main 主線分支並進行安全合併 (Merge)
 git checkout main
-git merge --no-ff feature/remove-auto-theme-mode-v22 -m "merge: feature/remove-auto-theme-mode-v22 into main"
+git merge --no-ff feature/tdx-api-fallback-system -m "merge: feature/tdx-api-fallback-system into main"
 
-# 6. 將最新 main 分支推送至 GitHub 遠端
+# 6. 將最新 main 主線分支推送至 GitHub 遠端
 git push origin main
 
-# 7. (選用) 刪除已合併的分支
-git branch -d feature/remove-auto-theme-mode-v22
-git push origin --delete feature/remove-auto-theme-mode-v22
+# 7. (選用) 刪除已合併的功能分支
+git branch -d feature/tdx-api-fallback-system
+git push origin --delete feature/tdx-api-fallback-system
 ```
 
 ---
@@ -93,7 +104,7 @@ git push origin --delete feature/remove-auto-theme-mode-v22
 1. 推送至 GitHub：
    ```bash
    git add .
-   git commit -m "feat: release V22 Manual Day/Night Mode SPA"
+   git commit -m "feat: release TDX API Anomaly Detection & Fallback Animation SPA"
    git push origin main
    ```
 2. 前往 Repository 頁面 -> **Settings** -> **Pages**。
